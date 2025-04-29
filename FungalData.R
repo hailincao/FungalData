@@ -1,0 +1,428 @@
+#install.packages('phyloseq')
+library(phyloseq)
+library(dplyr)
+#install.packages('stringr')
+library(stringr)
+#install.packages("writexl")
+library(writexl)
+
+
+#install.packages("BiocManager")
+#BiocManager::install("phyloseq")
+#BiocManager::install("decontam")
+library(decontam)
+library(phyloseq)
+#install.packages("vegan")
+library(vegan)
+#install.packages("pheatmap")
+library(pheatmap)
+library(tidyverse)
+#install.packages("Matrix")
+library(Matrix)
+
+
+getwd()
+setwd("/Users/caoyang/Desktop/Tetel Lab")
+
+data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
+
+otu_table(data)
+?otu_table
+tax_table(data)
+
+View(otuF)
+
+taxaF <- tax_table(data)
+otuF <- otu_table(data)
+otuF
+
+otuF@.Data[1,]
+dim(otuF@.Data)
+dim(taxaF@.Data)
+
+#sample_data(data)
+
+#rows in both datasets are genetic sequences, the otu dataset says 1/0 whether it has that genetic sequence
+#rownames in taxa table : specific sequences; whether a sample have this sequence: indicated by 0/1
+
+length(table(taxaF@.Data[,"Species"]))
+#so each row is not species, since the number of species is much shorter than #rows, maybe it's substring?
+#there should be somewhere that associate the id numbers in otu with the specific participant 
+
+# colnamesOtu <- colnames(otuF@.Data)
+# colnamesOtu
+# 
+# rowOtu <- rownames(otuF@.Data)
+# rowOtu
+
+dim(otuF@.Data)
+#dim(taxa_matrix)
+str(taxaF)
+taxa_matrix <- taxaF@.Data
+taxa_matrix[1,]
+rownames <- rownames(taxaF@.Data)
+rownames
+colnames <- colnames(taxaF@.Data)
+colnames
+taxa_matrix[, "SH"]
+sequence <- taxaF@.Data[, "sequence"]
+# sequence[1]
+# sequence[2]
+# sequence[5]
+
+species <- taxaF@.Data[, "Species"]
+dim(taxaF)
+# species[1]
+# species[2]
+# species[3]
+# species[4]
+# species[5]
+
+table(taxaF@.Data[, "Species"])
+names(which.max(table(taxaF@.Data[, "Species"])))
+
+
+species <- taxaF@.Data[, "Species"]
+nonemptyspecies <- species[species != ""]# Remove empty strings
+emptystrings <- species[species == ""]
+length(emptystrings) #8560/15293 are empty
+most_frequent_species <- names(which.max(table(nonemptyspecies)))
+most_frequent_species
+
+
+#spot check random rows
+set.seed(123)
+randomrows <- sample(1:nrow(taxaF@.Data), 25)
+randomTaxa <- taxaF@.Data[randomrows, ]
+randomTaxa[, c("sequence", "Species", "Species_exact")] #shows sequence and species
+
+sequence_a0487137f959e09afcf2c8bbed1d3f0a <- taxaF@.Data["a0487137f959e09afcf2c8bbed1d3f0a", "sequence"] #species = "Metazoa_sp" 
+sequence_a0487137f959e09afcf2c8bbed1d3f0a
+sequence_2d9a26aa49b44db02454205f87f7229b <- taxaF@.Data["2d9a26aa49b44db02454205f87f7229b", "sequence"] #species = "Metazoa_sp"
+sequence_2d9a26aa49b44db02454205f87f7229b
+sequence_4e6a63a218b15e079e2be7182f463528 <- taxaF@.Data["4e6a63a218b15e079e2be7182f463528", "sequence"] #species = "Malassezia_globosa"
+sequence_4e6a63a218b15e079e2be7182f463528
+sequence_8fc4a855921af39c16de659ab850b298 <- taxaF@.Data["8fc4a855921af39c16de659ab850b298", "sequence"] #species = "Fusarium_mangiferae"
+sequence_8fc4a855921af39c16de659ab850b298
+sequence_3418b23c3ff6957730f17e4fd7e1f11a <- taxaF@.Data["3418b23c3ff6957730f17e4fd7e1f11a", "sequence"] #species = "Cercozoa_sp" 
+sequence_3418b23c3ff6957730f17e4fd7e1f11a
+sequence_ac6b493205438564c3895a162ba06d1a <- taxaF@.Data["ac6b493205438564c3895a162ba06d1a", "sequence"] #species = "Metazoa_sp"
+sequence_ac6b493205438564c3895a162ba06d1a
+sequence_e69ecb46b691be29b77534c32028225c <- taxaF@.Data["e69ecb46b691be29b77534c32028225c", "sequence"] #species = "subulatus"
+sequence_e69ecb46b691be29b77534c32028225c
+sequence_df61fec922e8ebfc48f748002c71926c <- taxaF@.Data["df61fec922e8ebfc48f748002c71926c", "sequence"] #species = "Metazoa_sp"
+sequence_df61fec922e8ebfc48f748002c71926c
+sequence_866e0176108bba26deba664c1a0ab8ff <- taxaF@.Data["866e0176108bba26deba664c1a0ab8ff", "sequence"] #species = "Metazoa_sp"
+sequence_866e0176108bba26deba664c1a0ab8ff
+sequence_f9d7bb29bdd41360e3a98318a78a9a9a <- taxaF@.Data["f9d7bb29bdd41360e3a98318a78a9a9a", "sequence"] #species = "Brassica_carinata"
+sequence_f9d7bb29bdd41360e3a98318a78a9a9a
+
+#Species, Confidence, Participant ID
+#For each person, what is the most common specie/Shannon Diversity Index???
+#what does each row represents? There is 15000+ rows
+
+length(table(rownames)) #are they repeating rownames? no
+
+
+
+#trying Alice's code #checking contamination
+ntaxa(data)
+nsamples(data)
+sample_names(data)[1:5]
+rank_names(data)
+sample_variables(data, errorIfNULL=FALSE) # no colnames
+otu_table(data)[1:5, 1:5]
+tax_table(data)[1:5, 1:4]
+phy_tree(data, errorIfNULL=FALSE) # no phylo tree
+taxa_names(data)[1:10]
+
+taxa_fungal.data <- as.data.frame(tax_table(data))
+dim(taxa_fungal.data)
+summary(as.numeric(taxa_fungal.data$confidence))
+table(as.numeric(taxa_fungal.data$confidence))
+
+otu_table_fungal.data <- as.data.frame(otu_table(data))
+
+### Data Preprocessing
+
+otu_table_fungal.data <- as.data.frame(t(otu_table_fungal.data))
+
+metadata_fungal <- otu_table_fungal.data %>% 
+  mutate(SampleID=rownames(otu_table_fungal.data),
+         is_blank=as.logical(ifelse(str_detect(SampleID, "BLANK"), "TRUE", "FALSE")),
+         SampleID= sub("\\..*", "", SampleID)) %>%
+  select(SampleID, is_blank)
+
+#The above code processes the otu_table_fungal.data object to:
+#Extract row names (assumed to be sample IDs) into a new column called SampleID.
+#Create a logical column (is_blank) that indicates whether the sample ID contains the word "BLANK".
+#Clean up the SampleID column by removing everything after the first dot.
+#Retain only the SampleID and is_blank columns in the final output, which is stored in metadata_fungal.
+
+# Convert back to phyloseq obj
+otu_table_obj <- otu_table(otu_table_fungal.data, taxa_are_rows = FALSE)
+sample_data_obj <- sample_data(metadata_fungal)
+fungal_physeq <- phyloseq(otu_table_obj, sample_data_obj, tax_table(data))
+
+# Identify contaminants based on prevalence
+contam_prev <- isContaminant(fungal_physeq, method = "prevalence", neg = "is_blank")
+contaminants <- contam_prev$contaminant
+contaminants
+
+#filter the contaminants
+fungal_physeq_no_contam <- prune_taxa(!contaminants, fungal_physeq)
+fungal_physeq_subset <- subset_taxa(fungal_physeq_no_contam, Kingdom == "Fungi" & !is.na(Phylum) & Phylum != "")
+
+#checking the dimension
+#rows are the number of samples, columns are taxa
+dim(otu_table_obj)
+dim(otu_table(fungal_physeq_subset))
+dim(otu_table(fungal_physeq_no_contam))
+otu_table(fungal_physeq_subset)[1,]
+
+#otutable spreadsheet
+View()
+
+#readme
+
+class(fungal_physeq_subset)
+
+#3.26
+dominant_spec <- apply(t(otu_table(fungal_physeq_subset)), 2, function(x) {
+  spec <- tax_table(fungal_physeq_subset)[which.max(x), "Species"]
+  # ifelse(is.na(spec), "Unknown", spec)
+})
+
+head(dominant_spec)
+
+
+# cat("OTU table dimensions:", dim(otu_table(fungal_physeq_no_contam)), "\n")
+# cat("Tax table dimensions:", dim(tax_table(fungal_physeq_no_contam)), "\n")
+# 
+# 
+# 
+# otu_corrected <- otu_table(t(otu_table(fungal_physeq_no_contam)), taxa_are_rows = TRUE)
+# corrected_physeq <- phyloseq(
+#   otu_corrected,
+#   tax_table(fungal_physeq_no_contam),
+#   sample_data(fungal_physeq_no_contam) # If you have sample data
+# )
+# 
+# dominant_spec <- apply(otu_table(fungal_physeq_no_contam), 1, function(x) {
+#   spec <- tax_table(fungal_physeq_no_contam)[which.max(x), "Species"]
+#   ifelse(is.na(spec), "Unknown", spec)
+# })
+
+#creating dominant species column
+sample_data(fungal_physeq_subset)$DominantSpecies <- dominant_spec
+#check if the column is there
+sample_data(fungal_physeq_subset)$DominantSpecies
+#check the class of the object we created
+summary(fungal_physeq_subset)
+#the sample data part of our object
+View(sample_data(fungal_physeq_subset))
+#sort the most frequently appeared species in the sample data
+sort(table(sample_data(fungal_physeq_subset)$DominantSpecies))  # Candida_albicans  the most frequently appeared
+
+#4.2
+#turning the otu table back to data frame
+physeqOTU<- as.data.frame(otu_table(fungal_physeq_subset))
+physeqOTU["F1376",1:10] #the first ten rows of this sample column
+
+ncol(physeqOTU)
+dim(physeqOTU)
+
+# ones_indices <- which(physeqOTU["F1376", ] == 1) #looking for the sequences tagged as 1 
+# ones_indices
+# sum(physeqOTU["F1376", ] == 0)
+# any(physeqOTU["F1376", ] == 1)
+nonzero <- which(physeqOTU["F1376", ] != 0) 
+nonzero #the column numbers of sequence ID
+physeqOTU["F1376", nonzero] #the counts of the nonzero species
+sequenceIDnonzero <- colnames(physeqOTU)[nonzero]
+#> colnames(physeqOTU)[nonzero]
+#"074f81db997e702d17c85be0c46b03ad" "9589a4186e70b56c852377d7562d4789" "f8f00151e8dd21d0f490343afb43d854"
+#"f74f09973e588cd61df7e11c6620c2fd" "8d50d5e4d31b744eb9647746878c017e"
+taxaF@.Data["074f81db997e702d17c85be0c46b03ad", "Species"] #it's Candida_albicans
+
+#4.3
+#install.packages('readxl')
+library(readxl)
+getwd()
+sampleLabel<-read_excel("/Users/caoyang/Desktop/Tetel Lab/cleaned_samplesv2.xlsx")
+dim(sampleLabel)
+colnames(sampleLabel)
+head(sampleLabel)
+sampleLabel$sampleID <- sampleLabel$qr
+sampleLabel <- sampleLabel[, c("sampleID", "biome_id", "sampleType")]
+head(sampleLabel)
+
+temp <- t(otu_table(fungal_physeq_subset))
+dim(temp)
+temp[1:10, 1:10]
+temp2<-temp[, "F1376"]
+head(temp2)
+table(temp2)
+
+which.max(temp2)
+temp2[2024]
+rownames(temp2[1:10])
+rownames(temp2[temp2>0])
+taxaF@.Data["f8f00151e8dd21d0f490343afb43d854", "Species"] 
+
+# temp["Species", temp2>0] 
+
+
+#merging sample label and sample data
+?merge()
+
+
+
+sum(duplicated(sample_names(fungal_physeq_subset)))  
+sum(duplicated(sampleLabel$sampleID))  
+
+head(sample_names(fungal_physeq_subset)) 
+
+head(rownames(sampleLabel))  
+head(sampleLabel$sampleID)
+
+#removing the ones that are blank
+fungal_physeq_subset <- subset_samples(
+  fungal_physeq_subset,
+  !str_detect(sample_names(fungal_physeq_subset), "^BLANK")
+)
+# Trim .ITS2
+sample_names(fungal_physeq_subset) <- str_remove(sample_names(fungal_physeq_subset), "\\.ITS2$")
+
+head(sample_data(fungal_physeq_subset))
+
+temp <-sample_data(fungal_physeq_subset) 
+sampleDataforMerge <- data.frame(temp$SampleID, temp$is_blank, temp$DominantSpecies)
+head(sampleDataforMerge)
+colnames(sampleDataforMerge) <- (c("SampleID", "is_blank", "DominantSpecies"))
+
+
+labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE)
+cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE)
+View(cl_labeled_sample)
+
+#the ones with my extra rows but not the extra rows in Alice's
+dim(sampleDataforMerge)
+sampleClean<-merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all.x=TRUE, all.y=FALSE)
+dim(sampleClean)
+View(sampleClean)
+
+write.csv(cl_labeled_sample,"Cleaned Fungal Data")
+write_xlsx(cl_labeled_sample, "Cleaned Fungal Data Sheet")
+
+nrow(labeled_sample)
+
+dim(cl_labeled_sample)
+dim(labeled_sample)
+
+View(labeled_sample)
+names(sample_data(fungal_physeq_subset))
+
+View(sample_data(fungal_physeq_subset))
+
+head(sample_names(fungal_physeq_subset)) 
+#head((sample_data(fungal_physeq_subset))
+dim(sample_data(fungal_physeq_subset))
+dim(sampleLabel)
+View(sampleLabel)
+
+#table
+table(is.na(labeled_sample$is_blank), is.na(labeled_sample$sampleType)) #1766 were matched, 105 were in fungal data but not Alice's data, 1249 were in Alice's data but not fungal data
+table(is.na(labeled_sample$sampleType))
+
+
+#April 17
+#checking to see the sample names for the 105 and 1249 ones
+subset1 <- labeled_sample[!is.na(labeled_sample$is_blank) & is.na(labeled_sample$sampleType), ]
+dim(subset1)
+View(subset1) #the ones not found in Alice's data
+subset2 <- labeled_sample[is.na(labeled_sample$is_blank) & !is.na(labeled_sample$sampleType), ]
+dim(subset2)
+View(subset2) #the ones not found in my data
+
+#check rownames
+head(rownames(sampleLabel))  
+head(sampleLabel$sampleID)  
+rownames(sampleLabel) <- sampleLabel$sampleID 
+
+clean_labeled_sample<-labeled_sample[, c("SampleID", "is_blank", "DominantSpecies", "sampleType")] #removing the collumns that I don't want
+View(sample_data(fungal_physeq_subset))
+head(sample_data(fungal_physeq_subset))
+head(clean_labeled_sample)
+View((clean_labeled_sample))
+
+#rownames(clean_labeled_sample) <- sample_names(fungal_physeq_subset)
+#nrow(clean_labeled_sample)
+
+#sample_data(fungal_physeq_subset) <- clean_labeled_sample
+head(sample_names(fungal_physeq_subset))
+head(rownames(clean_labeled_sample))
+nrow(clean_labeled_sample)
+dim(sample_data(fungal_physeq_subset))
+
+
+#randomly picking 5 fungus and BLAST
+set.seed(345)
+randomrowsFungus <- sample(1:nrow(tax_table(fungal_physeq_subset)), 5)
+randomTaxaFungus <- tax_table(fungal_physeq_subset)[randomrowsFungus, ]
+randomTaxaFungus[, c("sequence", "Species")]
+
+
+
+
+#Alpha Diversity
+alpha_div <- estimate_richness(fungal_physeq_subset, measures = c("Shannon"))
+
+summary(alpha_div[[1]]) #alpha_div is a list and we want the first element in the list
+
+
+plot_richness(fungal_physeq_subset, x = "SampleID", measures = c("Shannon")) + theme_minimal()
+
+plot_richness(fungal_physeq_subset, x = "SampleID", color = "DominantSpecies", measures = c("Shannon")) +
+  theme_minimal() +
+  ggtitle("Alpha Diversity Colored by Dominant Species")
+#this looks chaotic
+
+#creating the sampledata as a data frame
+fungalSample <- sampleClean
+fungalSample$Shannon <- alpha_div[[1]]
+colnames(fungalSample)
+#colnames(fungalSample)[4] <- "Shannon"
+View(fungalSample)
+summary(fungalSample)
+hist(fungalSample$Shannon)
+
+
+#Shannon for vaginal
+summary(fungalSample$Shannon[fungalSample$sampleType == "vaginal"])
+boxplot(fungalSample$Shannon[fungalSample$sampleType == "vaginal"], fungalSample$Shannon[fungalSample$sampleType == "fecal"], names = c("vaginal", "fecal"))
+
+
+VaginalSample <- fungalSample %>% 
+  filter(sampleType == "vaginal")
+
+dim(VaginalSample)
+
+FecalSample <- fungalSample %>% 
+  filter(sampleType == "fecal")
+
+dim(FecalSample)
+
+sort(table(VaginalSample$DominantSpecies))
+#Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
+
+sort(table(FecalSample$DominantSpecies))
+#Candida_albicans 267 empty 197 restricta 31 globosa 28 Malassezia_globosa 14 Candida_parapsilosis 11
+
+#Diversity is different but not the dominant species 
+
+
+
+
+
+
