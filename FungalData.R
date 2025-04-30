@@ -398,20 +398,49 @@ summary(fungalSample)
 hist(fungalSample$Shannon)
 
 
+#strip rows with empty dominant species out so that when we're calculating shannon we don't take empty as a species
+fungalSamplecl <- fungalSample %>%
+  filter(DominantSpecies != "", !is.na(DominantSpecies))
+
 #Shannon for vaginal
 summary(fungalSample$Shannon[fungalSample$sampleType == "vaginal"])
 boxplot(fungalSample$Shannon[fungalSample$sampleType == "vaginal"], fungalSample$Shannon[fungalSample$sampleType == "fecal"], names = c("vaginal", "fecal"))
 
 
-VaginalSample <- fungalSample %>% 
+VaginalSample <- fungalSamplecl %>% 
   filter(sampleType == "vaginal")
 
 dim(VaginalSample)
 
-FecalSample <- fungalSample %>% 
+#group vaginal sample by participants
+groupedVaginal <- VaginalSample %>%
+  group_by(biome_id) %>%
+  summarise(
+    avg_Shannon = mean(Shannon, na.rm = TRUE),
+    n_samples = n(),
+    dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
+  )
+View(groupedVaginal)
+
+#extracting fecal sample
+FecalSample <- fungalSamplecl %>% 
   filter(sampleType == "fecal")
 
+#grouping fecal sample by participants
+groupedFecal <- FecalSample %>%
+  group_by(biome_id) %>%
+  summarise(
+    avg_Shannon = mean(Shannon, na.rm = TRUE),
+    n_samples = n(),
+    dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
+  )
+View(groupedFecal)
+
 dim(FecalSample)
+
+#boxplot by participants
+?boxplot()
+boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon, names = c("vaginal", "fecal"), main = "Shannon by Participants")
 
 sort(table(VaginalSample$DominantSpecies))
 #Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
@@ -420,6 +449,20 @@ sort(table(FecalSample$DominantSpecies))
 #Candida_albicans 267 empty 197 restricta 31 globosa 28 Malassezia_globosa 14 Candida_parapsilosis 11
 
 #Diversity is different but not the dominant species 
+
+#grouping sample by participants
+groupedSampleP <- fungalSample %>%
+  group_by(biome_id) %>%
+  summarise(
+    avg_Shannon = mean(Shannon, na.rm = TRUE),
+    n_samples = n()
+  )
+
+View(groupedSampleP)
+
+table(groupedVaginal$dominantSpecies)
+table(groupedFecal$dominantSpecies)
+
 
 
 
