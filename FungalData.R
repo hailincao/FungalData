@@ -395,7 +395,7 @@ colnames(fungalSample)
 #colnames(fungalSample)[4] <- "Shannon"
 View(fungalSample)
 summary(fungalSample)
-hist(fungalSample$Shannon)
+hist(fungalSample$Shannon) 
 
 
 #strip rows with empty dominant species out so that when we're calculating shannon we don't take empty as a species
@@ -442,7 +442,8 @@ dim(FecalSample)
 ?boxplot()
 boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon, names = c("vaginal", "fecal"), main = "Shannon by Participants")
 
-sort(table(VaginalSample$DominantSpecies))
+sort(table(VaginalSample$DominantSpecies)) 
+
 #Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
 
 sort(table(FecalSample$DominantSpecies))
@@ -462,6 +463,90 @@ View(groupedSampleP)
 
 table(groupedVaginal$dominantSpecies)
 table(groupedFecal$dominantSpecies)
+
+
+#DASS importing
+#file_path <- file.choose()
+#file.info(file_path)
+
+#Alice's codes
+dass_data <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/Report 10-DASS-21.csv")
+id_mapping <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/Original Study Mapping - Sheet3.csv")
+
+### Map uid to study id
+
+# Get unique study and biome health pairings
+study_and_u_id <- unique(id_mapping %>% 
+                           select(STUDY.ID, Biome.Health.App.ID))
+
+# Match and join columns
+study_and_u_id <- study_and_u_id %>% 
+  rename("study_id" = "STUDY.ID") %>% 
+  rename("biome_id" = "Biome.Health.App.ID")
+dass_data <- dass_data %>% 
+  rename("biome_id" = "Your.Biome.Health.App.ID")
+study_and_u_id$study_id <- as.character(study_and_u_id$study_id)
+
+# Map ids
+dass_data <- dass_data %>%
+  left_join(study_and_u_id, by = "biome_id") %>%
+  mutate(biome_id = coalesce(study_id, biome_id)) %>%
+  select(-study_id)
+
+# Check missing ids
+missing_list <- dass_data %>%
+  filter(is.na(as.numeric(biome_id)))
+print(unique(missing_list$biome_id))
+
+dim(dass_data)
+View(dass_data)
+
+### Save final data output
+write.csv(dass_data,
+          file = "/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv",
+          row.names = FALSE)
+
+# ------------------------------------------------------------------------------
+# calculate depression, anxiety, and stress scores 
+# ------------------------------------------------------------------------------
+dass <- dass_data
+dass$Timestamp <- as.Date(dass$Timestamp, format="%m/%d/%y", tz="UTC")
+id_values <- unique(dass$study_id) 
+time_values <- sort(unique(dass$Timestamp))
+num_time_values <- as.numeric(time_values)
+dass <- dass[order(dass$Timestamp),]
+
+summary(dass$Timestamp)
+#Remove any values that occurred after 12/16 (end of semester)
+dass$Timestamp_numeric <- as.numeric(dass$Timestamp)
+dass <- dass[dass$Timestamp_numeric <= 19342, ] #can't get 19342
+View(dass)
+?as.Date
+
+# dass$week <- rep(NA, nrow(dass))
+# dass$week[dass$Timestamp >= 19276 & dass$Timestamp <= 19280] <- 1
+# dass$week[dass$Timestamp >= 19281 & dass$Timestamp <= 19286] <- 2
+# dass$week[dass$Timestamp >= 19290 & dass$Timestamp <= 19293] <- 3
+# dass$week[dass$Timestamp >= 19296 & dass$Timestamp <= 19300] <- 4
+# dass$week[dass$Timestamp >= 19302 & dass$Timestamp <= 19308] <- 5
+# dass$week[dass$Timestamp >= 19312 & dass$Timestamp <= 19315] <- 6
+# dass$week[dass$Timestamp >= 19319 & dass$Timestamp <= 19321] <- 7
+# dass$week[dass$Timestamp >= 19323 & dass$Timestamp <= 19329] <- 8
+# dass$week[dass$Timestamp >= 19330 & dass$Timestamp <= 19336] <- 9
+# dass$week[dass$Timestamp >= 19339] <- 10
+# 
+# dass <- dass %>% 
+#   filter(!is.na(week))
+
+
+
+
+
+
+
+
+
+
 
 
 
