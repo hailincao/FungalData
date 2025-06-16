@@ -30,7 +30,7 @@ otu_table(data)
 ?otu_table
 tax_table(data)
 
-View(otuF)
+#View(otuF)
 
 taxaF <- tax_table(data)
 otuF <- otu_table(data)
@@ -181,7 +181,6 @@ dim(otu_table(fungal_physeq_no_contam))
 otu_table(fungal_physeq_subset)[1,]
 
 #otutable spreadsheet
-View()
 
 #readme
 
@@ -304,13 +303,13 @@ colnames(sampleDataforMerge) <- (c("SampleID", "is_blank", "DominantSpecies"))
 
 labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE)
 cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE)
-View(cl_labeled_sample)
+#View(cl_labeled_sample)
 
 #the ones with my extra rows but not the extra rows in Alice's
 dim(sampleDataforMerge)
 sampleClean<-merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all.x=TRUE, all.y=FALSE)
 dim(sampleClean)
-View(sampleClean)
+#View(sampleClean)
 
 write.csv(cl_labeled_sample,"Cleaned Fungal Data")
 write_xlsx(cl_labeled_sample, "Cleaned Fungal Data Sheet")
@@ -320,16 +319,16 @@ nrow(labeled_sample)
 dim(cl_labeled_sample)
 dim(labeled_sample)
 
-View(labeled_sample)
+#View(labeled_sample)
 names(sample_data(fungal_physeq_subset))
 
-View(sample_data(fungal_physeq_subset))
+#View(sample_data(fungal_physeq_subset))
 
 head(sample_names(fungal_physeq_subset)) 
 #head((sample_data(fungal_physeq_subset))
 dim(sample_data(fungal_physeq_subset))
 dim(sampleLabel)
-View(sampleLabel)
+#View(sampleLabel)
 
 #table
 table(is.na(labeled_sample$is_blank), is.na(labeled_sample$sampleType)) #1766 were matched, 105 were in fungal data but not Alice's data, 1249 were in Alice's data but not fungal data
@@ -351,10 +350,10 @@ head(sampleLabel$sampleID)
 rownames(sampleLabel) <- sampleLabel$sampleID 
 
 clean_labeled_sample<-labeled_sample[, c("SampleID", "is_blank", "DominantSpecies", "sampleType")] #removing the collumns that I don't want
-View(sample_data(fungal_physeq_subset))
+#View(sample_data(fungal_physeq_subset))
 head(sample_data(fungal_physeq_subset))
 head(clean_labeled_sample)
-View((clean_labeled_sample))
+#View((clean_labeled_sample))
 
 #rownames(clean_labeled_sample) <- sample_names(fungal_physeq_subset)
 #nrow(clean_labeled_sample)
@@ -420,7 +419,7 @@ groupedVaginal <- VaginalSample %>%
     n_samples = n(),
     dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
   )
-View(groupedVaginal)
+#View(groupedVaginal)
 
 #extracting fecal sample
 FecalSample <- fungalSamplecl %>% 
@@ -434,7 +433,7 @@ groupedFecal <- FecalSample %>%
     n_samples = n(),
     dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
   )
-View(groupedFecal)
+#View(groupedFecal)
 
 dim(FecalSample)
 
@@ -443,7 +442,6 @@ dim(FecalSample)
 boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon, names = c("vaginal", "fecal"), main = "Shannon by Participants")
 
 sort(table(VaginalSample$DominantSpecies)) 
-
 #Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
 
 sort(table(FecalSample$DominantSpecies))
@@ -459,7 +457,7 @@ groupedSampleP <- fungalSample %>%
     n_samples = n()
   )
 
-View(groupedSampleP)
+#View(groupedSampleP)
 
 table(groupedVaginal$dominantSpecies)
 table(groupedFecal$dominantSpecies)
@@ -472,6 +470,7 @@ table(groupedFecal$dominantSpecies)
 #Alice's codes
 dass_data <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/Report 10-DASS-21.csv")
 id_mapping <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/Original Study Mapping - Sheet3.csv")
+
 
 ### Map uid to study id
 
@@ -499,7 +498,7 @@ missing_list <- dass_data %>%
 print(unique(missing_list$biome_id))
 
 dim(dass_data)
-View(dass_data)
+#View(dass_data)
 
 ### Save final data output
 write.csv(dass_data,
@@ -510,7 +509,9 @@ write.csv(dass_data,
 # calculate depression, anxiety, and stress scores 
 # ------------------------------------------------------------------------------
 dass <- dass_data
-dass$Timestamp <- as.Date(dass$Timestamp, format="%m/%d/%y", tz="UTC")
+dass$Timestamp <- as.Date(dass$Timestamp, format="%m/%d/%Y", tz="UTC") #the "%Y" must be capitalized
+head(dass_data$Timestamp)
+head(dass$Timestamp)
 id_values <- unique(dass$study_id) 
 time_values <- sort(unique(dass$Timestamp))
 num_time_values <- as.numeric(time_values)
@@ -519,24 +520,26 @@ dass <- dass[order(dass$Timestamp),]
 summary(dass$Timestamp)
 #Remove any values that occurred after 12/16 (end of semester)
 dass$Timestamp_numeric <- as.numeric(dass$Timestamp)
-dass <- dass[dass$Timestamp_numeric <= 19342, ] #can't get 19342
+table(dass$Timestamp)
+dass <- dass[dass$Timestamp_numeric <= 19342, ] 
 View(dass)
 ?as.Date
 
-# dass$week <- rep(NA, nrow(dass))
-# dass$week[dass$Timestamp >= 19276 & dass$Timestamp <= 19280] <- 1
-# dass$week[dass$Timestamp >= 19281 & dass$Timestamp <= 19286] <- 2
-# dass$week[dass$Timestamp >= 19290 & dass$Timestamp <= 19293] <- 3
-# dass$week[dass$Timestamp >= 19296 & dass$Timestamp <= 19300] <- 4
-# dass$week[dass$Timestamp >= 19302 & dass$Timestamp <= 19308] <- 5
-# dass$week[dass$Timestamp >= 19312 & dass$Timestamp <= 19315] <- 6
-# dass$week[dass$Timestamp >= 19319 & dass$Timestamp <= 19321] <- 7
-# dass$week[dass$Timestamp >= 19323 & dass$Timestamp <= 19329] <- 8
-# dass$week[dass$Timestamp >= 19330 & dass$Timestamp <= 19336] <- 9
-# dass$week[dass$Timestamp >= 19339] <- 10
-# 
-# dass <- dass %>% 
-#   filter(!is.na(week))
+dass$week <- rep(NA, nrow(dass))
+dass$week[dass$Timestamp >= 19276 & dass$Timestamp <= 19280] <- 1
+dass$week[dass$Timestamp >= 19281 & dass$Timestamp <= 19286] <- 2
+dass$week[dass$Timestamp >= 19290 & dass$Timestamp <= 19293] <- 3
+dass$week[dass$Timestamp >= 19296 & dass$Timestamp <= 19300] <- 4
+dass$week[dass$Timestamp >= 19302 & dass$Timestamp <= 19308] <- 5
+dass$week[dass$Timestamp >= 19312 & dass$Timestamp <= 19315] <- 6
+dass$week[dass$Timestamp >= 19319 & dass$Timestamp <= 19321] <- 7
+dass$week[dass$Timestamp >= 19323 & dass$Timestamp <= 19329] <- 8
+dass$week[dass$Timestamp >= 19330 & dass$Timestamp <= 19336] <- 9
+dass$week[dass$Timestamp >= 19339] <- 10
+
+dass <- dass %>% 
+filter(!is.na(week))
+
 
 
 
