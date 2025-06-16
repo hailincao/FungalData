@@ -509,13 +509,17 @@ write.csv(dass_data,
 # calculate depression, anxiety, and stress scores 
 # ------------------------------------------------------------------------------
 dass <- dass_data
+#Convert to Date with origin 1970-01-01 (Unix epoch, default in R)
 dass$Timestamp <- as.Date(dass$Timestamp, format="%m/%d/%Y", tz="UTC") #the "%Y" must be capitalized
 head(dass_data$Timestamp)
 head(dass$Timestamp)
-id_values <- unique(dass$study_id) 
-time_values <- sort(unique(dass$Timestamp))
-num_time_values <- as.numeric(time_values)
+id_values <- unique(dass$biome_id) 
+table(id_values)
+# time_values <- sort(unique(dass$Timestamp))
+# num_time_values <- as.numeric(time_values)
 dass <- dass[order(dass$Timestamp),]
+
+colnames(dass)
 
 summary(dass$Timestamp)
 #Remove any values that occurred after 12/16 (end of semester)
@@ -540,10 +544,93 @@ dass$week[dass$Timestamp >= 19339] <- 10
 dass <- dass %>% 
 filter(!is.na(week))
 
+colnames(dass) 
+
+#depression score used column name
+dass$noPositiveFeeling <- dass$X3..I.couldn.t.seem.to.experience.any.positive.feeling.at.all
+dass$initiative <- dass$X5..I.found.it.difficult.to.work.up.the.initiative.to.do.things
+dass$noLookForward <- dass$X10..I.felt.that.I.had.nothing.to.look.forward.to
+dass$downhearted <- dass$X13..I.felt.down.hearted.and.blue
+dass$noEnthusiasm <- dass$X16..I.was.unable.to.become.enthusiastic.about.anything
+dass$feelWorthless <- dass$X17..I.felt.I.wasn.t.worth.much.as.a.person
+dass$lifeMeaningless <- dass$X21..I.felt.that.life.was.meaningless
+
+#anxiety score used column name
+dass$mouthDry <- dass$X2..I.was.aware.of.dryness.of.my.mouth
+dass$difficultyBreathing <- dass$X4..I.experienced.breathing.difficulty..e.g..excessively.rapid.breathing..breathlessness.in.the.absence.of.physical.exertion..
+dass$trembling <- dass$X7..I.experienced.trembling..e.g..in.the.hands.
+dass$panicSituation <- dass$X9..I.was.worried.about.situations.in.which.I.might.panic.and.make.a.fool.of.myself
+dass$closeToPanic <- dass$X15..I.felt.I.was.close.to.panic
+dass$awareHeart <- dass$X19..I.was.aware.of.the.action.of.my.heart.in.the.absence.of.physical.exertion..e.g..sense.of.heart.rate.increase..heart.missing.a.beat.
+dass$scared <- dass$X20..I.felt.scared.without.any.good.reason
+
+#stress score used column name
+dass$windDown <- dass$X1..I.found.it.hard.to.wind.down
+dass$overreact <- dass$X6..I.tended.to.over.react.to.situations
+dass$nervous <- dass$X8..I.felt.that.I.was.using.a.lot.of.nervous.energy
+dass$agitated <- dass$X11..I.found.myself.getting.agitated
+dass$difficultyRelax <- dass$X12..I.found.it.difficult.to.relax
+dass$intolerant <- dass$X14..I.was.intolerant.of.anything.that.kept.me.from.getting.on.with.what.I.was.doing
+dass$touchy <- dass$X18..I.felt.that.I.was.rather.touchy
+
+colnames(dass)
+
+dass$depression_score <- rep(NA, nrow(dass))
+dass$anxiety_score <- rep(NA, nrow(dass))
+dass$stress_score <- rep(NA, nrow(dass))
+
+for(id in id_values){
+  for(week in 1:10){
+    dass$depression_score[dass$biome_id==id & dass$week==week] <- 2*sum(dass$noPositiveFeeling[dass$biome_id==id & dass$week==week] + dass$initiative[dass$biome_id==id & dass$week==week] + dass$noLookForward[dass$biome_id==id & dass$week==week] + 
+                                                                          dass$downhearted[dass$biome_id==id & dass$week==week] + dass$noEnthusiasm[dass$biome_id==id & dass$week==week] + dass$feelWorthless[dass$biome_id==id & dass$week==week] + 
+                                                                          dass$lifeMeaningless[dass$biome_id==id & dass$week==week], na.rm=TRUE)
+    
+    dass$anxiety_score[dass$biome_id==id & dass$week==week] <- 2*sum(dass$mouthDry[dass$biome_id==id & dass$week==week] + dass$difficultyBreathing[dass$biome_id==id & dass$week==week] + dass$trembling[dass$biome_id==id & dass$week==week] + 
+                                                                       dass$panicSituation[dass$biome_id==id & dass$week==week] + dass$closeToPanic[dass$biome_id==id & dass$week==week] + 
+                                                                       dass$awareHeart[dass$biome_id==id & dass$week==week] + dass$scared[dass$biome_id==id & dass$week==week], na.rm=TRUE)
+    
+    dass$stress_score[dass$biome_id==id & dass$week==week] <- 2*sum(dass$windDown[dass$biome_id==id  & dass$week==week] + dass$overreact[dass$biome_id==id & dass$week==week] + dass$nervous[dass$biome_id==id & dass$week==week] + 
+                                                                      dass$agitated[dass$biome_id==id & dass$week==week] + dass$difficultyRelax[dass$biome_id==id & dass$week==week] + 
+                                                                      dass$intolerant[dass$biome_id==id & dass$week==week] + dass$touchy[dass$biome_id==id & dass$week==week], na.rm=TRUE)
+  }
+}
+
+View(dass)
+
+#creation of variables to categorize scores into level of severity 
+dass$depressionseverity <- rep(NA, nrow(dass))
+dass$anxietyseverity <- rep(NA, nrow(dass))
+dass$stressseverity<- rep(NA, nrow(dass))
+
+dass$depressionseverity[dass$depression_score>=0 & dass$depression_score<=9] <- 0 
+dass$depressionseverity[dass$depression_score>=10 & dass$depression_score<=13] <- 1 
+dass$depressionseverity[dass$depression_score>=14 & dass$depression_score<=20] <- 2
+dass$depressionseverity[dass$depression_score>=21 & dass$depression_score<=27] <- 3
+dass$depressionseverity[dass$depression_score>=28] <- 4
+
+dass$anxietyseverity[dass$anxiety_score>=0 & dass$anxiety_score<=7] <- 0
+dass$anxietyseverity[dass$anxiety_score>=8 & dass$anxiety_score<=9] <- 1
+dass$anxietyseverity[dass$anxiety_score>=10 & dass$anxiety_score<=14] <- 2
+dass$anxietyseverity[dass$anxiety_score>=15 & dass$anxiety_score<=19] <- 3
+dass$anxietyseverity[dass$anxiety_score>=20] <- 4
+
+dass$stressseverity[dass$stress_score>=0 & dass$stress_score<=14] <- 0
+dass$stressseverity[dass$stress_score>=15 & dass$stress_score<=18] <- 1
+dass$stressseverity[dass$stress_score>=19 & dass$stress_score<=25] <- 2
+dass$stressseverity[dass$stress_score>=26 & dass$stress_score<=33] <- 3
+dass$stressseverity[dass$stress_score>=34] <- 4
 
 
+# average stress score
+dass.avg <- dass %>% 
+  group_by(biome_id) %>% 
+  summarise(
+    avg_depr=sum(depression_score)/n(),
+    avg_anx=sum(anxiety_score)/n(),
+    avg_stress=sum(stress_score)/n()
+  )  
 
-
+View(dass.avg)
 
 
 
