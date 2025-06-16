@@ -5,7 +5,7 @@ library(dplyr)
 library(stringr)
 #install.packages("writexl")
 library(writexl)
-
+library(ggplot2)
 
 #install.packages("BiocManager")
 #BiocManager::install("phyloseq")
@@ -633,11 +633,39 @@ View(dass.avg)
 
 shannonDassbyP <- merge(groupedSampleP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
-View(shannonDassbyP)
+lmDepr <- lm(avg_Shannon ~ avg_depr, data = shannonDassbyP)
+summary(lmDepr) #pval = 0.8, adj r sqr = -0.01
+
+lmAnx <- lm(avg_Shannon ~ avg_anx, data = shannonDassbyP)
+summary(lmAnx) #pval = 0.7, adj r sqr = -0.01
+
+lmStr <- lm(avg_Shannon ~ avg_stress, data = shannonDassbyP)
+summary(lmStr) #pval = 0.228, adj r sqr = 0.007
 
 
 
-
+ggplot(shannonDassbyP) +
+  geom_point(aes(x = avg_depr, y = avg_Shannon, color = "Depression"), size = 2) +
+  geom_point(aes(x = avg_anx, y = avg_Shannon, color = "Anxiety"), size = 2) +
+  geom_point(aes(x = avg_stress, y = avg_Shannon, color = "Stress"), size = 2) +
+  geom_smooth(aes(x = avg_depr, y = avg_Shannon, color = "Depression"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  geom_smooth(aes(x = avg_anx, y = avg_Shannon, color = "Anxiety"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  geom_smooth(aes(x = avg_stress, y = avg_Shannon, color = "Stress"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  scale_color_manual(
+    name = "DASS",
+    values = c(
+      "Depression" = "blue",  
+      "Anxiety" = "red",     
+      "Stress" = "green"       
+    )
+  ) +
+  
+  # Clean theme
+  theme_classic() +
+  labs(x = "DASS Score", y = "Shannon Diversity Index")  # Updated y-axis label
 
 
 
