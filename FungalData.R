@@ -457,7 +457,7 @@ groupedSampleP <- fungalSample %>%
     n_samples = n()
   )
 
-#View(groupedSampleP)
+#View(groupedSampleP) 
 
 table(groupedVaginal$dominantSpecies)
 table(groupedFecal$dominantSpecies)
@@ -595,7 +595,6 @@ for(id in id_values){
   }
 }
 
-View(dass)
 
 #creation of variables to categorize scores into level of severity 
 dass$depressionseverity <- rep(NA, nrow(dass))
@@ -632,8 +631,9 @@ dass.avg <- dass %>%
 
 View(dass.avg)
 
+shannonDassbyP <- merge(groupedSampleP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
-
+View(shannonDassbyP)
 
 
 
