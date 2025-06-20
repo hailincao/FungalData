@@ -300,7 +300,6 @@ sampleDataforMerge <- data.frame(temp$SampleID, temp$is_blank, temp$DominantSpec
 head(sampleDataforMerge)
 colnames(sampleDataforMerge) <- (c("SampleID", "is_blank", "DominantSpecies"))
 
-
 labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE)
 cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE)
 #View(cl_labeled_sample)
@@ -371,6 +370,32 @@ randomrowsFungus <- sample(1:nrow(tax_table(fungal_physeq_subset)), 5)
 randomTaxaFungus <- tax_table(fungal_physeq_subset)[randomrowsFungus, ]
 randomTaxaFungus[, c("sequence", "Species")]
 
+#creating a new phyloseq object with updated sample table
+fungal2.0 <- fungal_physeq_subset
+rownames(cl_labeled_sample) <- cl_labeled_sample$SampleID
+sample_data(fungal2.0) <- cl_labeled_sample
+
+#get taxa table, otu table, sample data
+fungalTaxa <- tax_table(fungal2.0)
+fungalOTU <- otu_table(fungal2.0)
+fungalSample <- as.data.frame(as.matrix(sample_data(fungal2.0)))
+
+#filtering for just vaginal 
+vaginal_sample_data_phyloseq <- fungalSample %>% 
+  filter(sampleType=="vaginal")
+vaginal_fungal_otu <- fungalOTU[rownames(vaginal_sample_data_phyloseq), , drop = FALSE]
+vaginal_fungal_taxa <- fungalTaxa[colnames(vaginal_fungal_otu), , drop = FALSE]
+
+#vaginal phyloseq obj
+vaginal_phyloseq <- phyloseq(otu_table(vaginal_fungal_otu, taxa_are_rows=FALSE), 
+                             sample_data(vaginal_sample_data_phyloseq), tax_table(vaginal_fungal_taxa))
+
+#calculating for relative abundance
+vaginal_phyloseq_rel <- transform_sample_counts(vaginal_phyloseq, function(x) x / sum(x))
+#add C. albicans rel. abundance to sample data
+ca_phy <- subset_taxa(vaginal_phyloseq_rel, Species == "Candida_albicans")
+ca_abund <- rowSums( otu_table(ca_phy)[ , , drop = FALSE ] )
+sample_data(vaginal_phyloseq_rel)$CA_abund <- ca_abund[ sample_names(vaginal_phyloseq_rel) ]
 
 
 
@@ -670,7 +695,29 @@ ggplot(shannonDassbyP) +
   theme_classic() +
   labs(x = "DASS Score", y = "Shannon Diversity Index")
 
+###########################################################################
 
+#mapping c.albicans and dass scores
+#convert sample_data to csv
+vaginal_rel_metadata_df <- as(sample_data(vaginal_phyloseq_rel), "data.frame")
+vaginal_rel_metadata_df$biome_id <- as.integer(vaginal_rel_metadata_df$biome_id)
+View(vaginal_rel_metadata_df)
+
+vaginal_rel_metadata_df$logDate <- as.Date(vaginal_rel_metadata_df$logDate)
+
+dass$biome_id <- as.numeric(dass$biome_id)
+
+####################
+# in progress
+# dass_clean <- dass %>%
+#   select(biome_id, Timestamp, depression_score, anxiety_score, stress_score) %>%
+#   distinct()
+# #merge dass with csv
+# vaginal_rel_metadata_dass_df <- vaginal_rel_metadata_df %>%
+#   left_join(
+#     dass %>% select(biome_id, depression_score, anxiety_score, stress_score),
+#     by = "biome_id"
+#   )
 
 
 
