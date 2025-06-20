@@ -660,6 +660,8 @@ dass.avg <- dass %>%
   )  
 
 View(dass.avg)
+View(groupedSampleP)
+
 
 shannonDassbyP <- merge(groupedSampleP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
@@ -701,9 +703,8 @@ ggplot(shannonDassbyP) +
 #convert sample_data to csv
 vaginal_rel_metadata_df <- as(sample_data(vaginal_phyloseq_rel), "data.frame")
 vaginal_rel_metadata_df$biome_id <- as.integer(vaginal_rel_metadata_df$biome_id)
-View(vaginal_rel_metadata_df)
 
-vaginal_rel_metadata_df$logDate <- as.Date(vaginal_rel_metadata_df$logDate)
+
 
 dass$biome_id <- as.numeric(dass$biome_id)
 
