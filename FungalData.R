@@ -395,7 +395,7 @@ colnames(fungalSample)
 View(fungalSample)
 summary(fungalSample)
 hist(fungalSample$Shannon) 
-
+summary(fungalSample$sampleType == "vaginal")
 
 #strip rows with empty dominant species out so that when we're calculating shannon we don't take empty as a species
 fungalSamplecl <- fungalSample %>%
@@ -619,6 +619,11 @@ dass$stressseverity[dass$stress_score>=19 & dass$stress_score<=25] <- 2
 dass$stressseverity[dass$stress_score>=26 & dass$stress_score<=33] <- 3
 dass$stressseverity[dass$stress_score>=34] <- 4
 
+View(dass)
+plot(dass$Timestamp, dass$stress_score)
+smoothingSpline = smooth.spline(dass$Timestamp, dass$stress_score, spar=0.35)
+lines(smoothingSpline)
+
 
 # average stress score
 dass.avg <- dass %>% 
@@ -662,11 +667,8 @@ ggplot(shannonDassbyP) +
       "Stress" = "green"       
     )
   ) +
-  
-  # Clean theme
   theme_classic() +
-  labs(x = "DASS Score", y = "Shannon Diversity Index")  # Updated y-axis label
-
+  labs(x = "DASS Score", y = "Shannon Diversity Index")
 
 
 
