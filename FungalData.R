@@ -10,6 +10,7 @@ library(pheatmap)
 library(tidyverse)
 library(Matrix)
 library(readxl)
+library(magrittr)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -269,7 +270,6 @@ set.seed(345)
 randomrowsFungus <- sample(1:nrow(tax_table(fungal_physeq_subset)), 5)
 randomTaxaFungus <- tax_table(fungal_physeq_subset)[randomrowsFungus, ]
 randomTaxaFungus[, c("sequence", "Species")]
-
 
 ###############################################################################################
 #creating a new phyloseq object with updated sample table
@@ -676,6 +676,41 @@ dassCAplot %>%
 #     dass %>% select(biome_id, depression_score, anxiety_score, stress_score),
 #     by = "biome_id"
 #   )
+
+###############################################################################################
+#adding a column that stands for c.albican relative abundance calculated by rate out of total reads per sample
+otu_mat <- otu_table(fungal2.0)
+# Transpose only if taxa are not rows
+otu_mat <- if (!taxa_are_rows(fungal2.0)) {
+  t(otu_mat)
+} else {
+  otu_mat
+}
+otu_table(fungal2.0) <- otu_mat
+
+#adding total reads to sample data
+total_reads<- colSums(otu_table(fungal2.0))
+sample_data(fungal2.0)$total_reads <- total_reads
+
+#how many ASVs are identified
+asv_counts <- apply(otu_table(fungal2.0), 2, function(x) sum(x > 0))
+sample_data(fungal2.0)$ASV_counts <- asv_counts
+
+#adding C.albicans abudnance
+sample_data(fungal2.0)$Candida_abundance <- fungal2.0 %>%
+  {
+    otu <- otu_table(.)
+    tax <- tax_table(.)
+    candida_asvs <- rownames(tax)[tax[, "Species"] == "Candida_albicans"]
+    candida_counts <- otu[candida_asvs, , drop = FALSE] %>%
+      apply(2, sum)
+    candida_counts / sample_sums(.)
+  }
+
+
+
+
+
 
 
 
