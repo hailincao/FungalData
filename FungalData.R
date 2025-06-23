@@ -704,16 +704,83 @@ ggplot(shannonDassbyP) +
 vaginal_rel_metadata_df <- as(sample_data(vaginal_phyloseq_rel), "data.frame")
 vaginal_rel_metadata_df$biome_id <- as.integer(vaginal_rel_metadata_df$biome_id)
 
+View(vaginal_rel_metadata_df)
+
+hbcmerged_df <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/vaginal_rel_metadata_hbc_df_matched.csv")
+
+#calculating average c.albicans rel.abundanxe
+CAavgP <- hbcmerged_df %>%
+  group_by(biome_id) %>%
+  summarise(
+    avg_CA = mean(CA_abund, na.rm = TRUE),
+    n_samples = n()
+  )
+
+CAavgDass <- merge(CAavgP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
+
+ggplot(CAavgDass) +
+  geom_point(aes(x = avg_depr, y = avg_CA, color = "Depression"), size = 2) +
+  geom_point(aes(x = avg_anx, y = avg_CA, color = "Anxiety"), size = 2) +
+  geom_point(aes(x = avg_stress, y = avg_CA, color = "Stress"), size = 2) +
+  geom_smooth(aes(x = avg_depr, y = avg_CA, color = "Depression"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  geom_smooth(aes(x = avg_anx, y = avg_CA, color = "Anxiety"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  geom_smooth(aes(x = avg_stress, y = avg_CA, color = "Stress"),
+              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+  scale_color_manual(
+    name = "DASS",
+    values = c(
+      "Depression" = "blue",  
+      "Anxiety" = "red",     
+      "Stress" = "green"       
+    )
+  ) +
+  theme_classic() +
+  labs(x = "DASS Score", y = "C.albicans Avg Relative Abundance by P")
 
 
+#mapping c.albicans abundance by date 
 dass$biome_id <- as.numeric(dass$biome_id)
+hbcmerged_df$logDate <- as.Date(hbcmerged_df$logDate)
+
+dass_CA <- left_join(dass, hbcmerged_df, by = c("Timestamp"="logDate", "biome_id"="biome_id"), relationship = "many-to-many")
+
 
 ####################
-# in progress
-# dass_clean <- dass %>%
-#   select(biome_id, Timestamp, depression_score, anxiety_score, stress_score) %>%
-#   distinct()
-# #merge dass with csv
+dass_CA2 <- dass_CA %>%
+   select(biome_id, Timestamp, depression_score, anxiety_score, stress_score.x, CA_abund) %>%
+   distinct()
+
+dassCAplot <- dass_CA2 %>%
+  pivot_longer(cols = c(depression_score, anxiety_score, stress_score.x),
+               names_to = "ScoreType",
+               values_to = "Score")
+
+ggplot(dassCAplot, aes(x = Score, y = CA_abund, color = ScoreType)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "loess", se = FALSE, span = 0.75, size = 1.2) +
+  scale_color_manual(values = c("depression_score" = "blue", 
+                                "anxiety_score" = "red", 
+                                "stress_score.x" = "green")) +
+  labs(x = "DASS Score",
+       y = "C. albicans Relative Abundance",
+       color = NULL) +
+  xlim(0, 50) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "top",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+#checking p-val, non of them significant
+dassCAplot %>%
+  group_by(ScoreType) %>%
+  summarise(correlation = cor(Score, CA_abund, use = "complete.obs"),
+            p_value = cor.test(Score, CA_abund)$p.value,
+            method = "Pearson")
+#merge dass with csv
 # vaginal_rel_metadata_dass_df <- vaginal_rel_metadata_df %>%
 #   left_join(
 #     dass %>% select(biome_id, depression_score, anxiety_score, stress_score),
