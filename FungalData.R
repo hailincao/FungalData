@@ -1,46 +1,20 @@
-#install.packages('phyloseq')
 library(phyloseq)
 library(dplyr)
-#install.packages('stringr')
 library(stringr)
-#install.packages("writexl")
 library(writexl)
 library(ggplot2)
-
-#install.packages("BiocManager")
-#BiocManager::install("phyloseq")
-#BiocManager::install("decontam")
 library(decontam)
 library(phyloseq)
-#install.packages("vegan")
 library(vegan)
-#install.packages("pheatmap")
 library(pheatmap)
 library(tidyverse)
-#install.packages("Matrix")
 library(Matrix)
-
-
-getwd()
-setwd("/Users/caoyang/Desktop/Tetel Lab")
+library(readxl)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
-otu_table(data)
-?otu_table
-tax_table(data)
-
-#View(otuF)
-
 taxaF <- tax_table(data)
 otuF <- otu_table(data)
-otuF
-
-otuF@.Data[1,]
-dim(otuF@.Data)
-dim(taxaF@.Data)
-
-#sample_data(data)
 
 #rows in both datasets are genetic sequences, the otu dataset says 1/0 whether it has that genetic sequence
 #rownames in taxa table : specific sequences; whether a sample have this sequence: indicated by 0/1
@@ -49,15 +23,6 @@ length(table(taxaF@.Data[,"Species"]))
 #so each row is not species, since the number of species is much shorter than #rows, maybe it's substring?
 #there should be somewhere that associate the id numbers in otu with the specific participant 
 
-# colnamesOtu <- colnames(otuF@.Data)
-# colnamesOtu
-# 
-# rowOtu <- rownames(otuF@.Data)
-# rowOtu
-
-dim(otuF@.Data)
-#dim(taxa_matrix)
-str(taxaF)
 taxa_matrix <- taxaF@.Data
 taxa_matrix[1,]
 rownames <- rownames(taxaF@.Data)
@@ -117,12 +82,8 @@ sequence_866e0176108bba26deba664c1a0ab8ff
 sequence_f9d7bb29bdd41360e3a98318a78a9a9a <- taxaF@.Data["f9d7bb29bdd41360e3a98318a78a9a9a", "sequence"] #species = "Brassica_carinata"
 sequence_f9d7bb29bdd41360e3a98318a78a9a9a
 
-#Species, Confidence, Participant ID
-#For each person, what is the most common specie/Shannon Diversity Index???
-#what does each row represents? There is 15000+ rows
 
-length(table(rownames)) #are they repeating rownames? no
-
+length(table(rownames)) #are there repeating rownames? no
 
 
 #trying Alice's code #checking contamination
@@ -167,7 +128,6 @@ fungal_physeq <- phyloseq(otu_table_obj, sample_data_obj, tax_table(data))
 # Identify contaminants based on prevalence
 contam_prev <- isContaminant(fungal_physeq, method = "prevalence", neg = "is_blank")
 contaminants <- contam_prev$contaminant
-contaminants
 
 #filter the contaminants
 fungal_physeq_no_contam <- prune_taxa(!contaminants, fungal_physeq)
@@ -179,10 +139,6 @@ dim(otu_table_obj)
 dim(otu_table(fungal_physeq_subset))
 dim(otu_table(fungal_physeq_no_contam))
 otu_table(fungal_physeq_subset)[1,]
-
-#otutable spreadsheet
-
-#readme
 
 class(fungal_physeq_subset)
 
@@ -228,13 +184,6 @@ sort(table(sample_data(fungal_physeq_subset)$DominantSpecies))  # Candida_albica
 physeqOTU<- as.data.frame(otu_table(fungal_physeq_subset))
 physeqOTU["F1376",1:10] #the first ten rows of this sample column
 
-ncol(physeqOTU)
-dim(physeqOTU)
-
-# ones_indices <- which(physeqOTU["F1376", ] == 1) #looking for the sequences tagged as 1 
-# ones_indices
-# sum(physeqOTU["F1376", ] == 0)
-# any(physeqOTU["F1376", ] == 1)
 nonzero <- which(physeqOTU["F1376", ] != 0) 
 nonzero #the column numbers of sequence ID
 physeqOTU["F1376", nonzero] #the counts of the nonzero species
@@ -245,19 +194,11 @@ sequenceIDnonzero <- colnames(physeqOTU)[nonzero]
 taxaF@.Data["074f81db997e702d17c85be0c46b03ad", "Species"] #it's Candida_albicans
 
 #4.3
-#install.packages('readxl')
-library(readxl)
-getwd()
 sampleLabel<-read_excel("/Users/caoyang/Desktop/Tetel Lab/cleaned_samplesv2.xlsx")
-dim(sampleLabel)
-colnames(sampleLabel)
-head(sampleLabel)
 sampleLabel$sampleID <- sampleLabel$qr
 sampleLabel <- sampleLabel[, c("sampleID", "biome_id", "sampleType")]
-head(sampleLabel)
 
 temp <- t(otu_table(fungal_physeq_subset))
-dim(temp)
 temp[1:10, 1:10]
 temp2<-temp[, "F1376"]
 head(temp2)
@@ -269,22 +210,8 @@ rownames(temp2[1:10])
 rownames(temp2[temp2>0])
 taxaF@.Data["f8f00151e8dd21d0f490343afb43d854", "Species"] 
 
-# temp["Species", temp2>0] 
-
 
 #merging sample label and sample data
-?merge()
-
-
-
-sum(duplicated(sample_names(fungal_physeq_subset)))  
-sum(duplicated(sampleLabel$sampleID))  
-
-head(sample_names(fungal_physeq_subset)) 
-
-head(rownames(sampleLabel))  
-head(sampleLabel$sampleID)
-
 #removing the ones that are blank
 fungal_physeq_subset <- subset_samples(
   fungal_physeq_subset,
@@ -292,44 +219,23 @@ fungal_physeq_subset <- subset_samples(
 )
 # Trim .ITS2
 sample_names(fungal_physeq_subset) <- str_remove(sample_names(fungal_physeq_subset), "\\.ITS2$")
-
-head(sample_data(fungal_physeq_subset))
-
 temp <-sample_data(fungal_physeq_subset) 
 sampleDataforMerge <- data.frame(temp$SampleID, temp$is_blank, temp$DominantSpecies)
-head(sampleDataforMerge)
 colnames(sampleDataforMerge) <- (c("SampleID", "is_blank", "DominantSpecies"))
 
+#merging with or without all rows
 labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE)
 cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE)
-#View(cl_labeled_sample)
 
 #the ones with my extra rows but not the extra rows in Alice's
-dim(sampleDataforMerge)
 sampleClean<-merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all.x=TRUE, all.y=FALSE)
 dim(sampleClean)
-#View(sampleClean)
 
 write.csv(cl_labeled_sample,"Cleaned Fungal Data")
 write_xlsx(cl_labeled_sample, "Cleaned Fungal Data Sheet")
 
-nrow(labeled_sample)
 
-dim(cl_labeled_sample)
-dim(labeled_sample)
-
-#View(labeled_sample)
-names(sample_data(fungal_physeq_subset))
-
-#View(sample_data(fungal_physeq_subset))
-
-head(sample_names(fungal_physeq_subset)) 
-#head((sample_data(fungal_physeq_subset))
-dim(sample_data(fungal_physeq_subset))
-dim(sampleLabel)
-#View(sampleLabel)
-
-#table
+#table of how many rows are missing from each merged dataset
 table(is.na(labeled_sample$is_blank), is.na(labeled_sample$sampleType)) #1766 were matched, 105 were in fungal data but not Alice's data, 1249 were in Alice's data but not fungal data
 table(is.na(labeled_sample$sampleType))
 
@@ -338,26 +244,20 @@ table(is.na(labeled_sample$sampleType))
 #checking to see the sample names for the 105 and 1249 ones
 subset1 <- labeled_sample[!is.na(labeled_sample$is_blank) & is.na(labeled_sample$sampleType), ]
 dim(subset1)
-View(subset1) #the ones not found in Alice's data
+#View(subset1) #the ones not found in Alice's data
 subset2 <- labeled_sample[is.na(labeled_sample$is_blank) & !is.na(labeled_sample$sampleType), ]
 dim(subset2)
-View(subset2) #the ones not found in my data
+#View(subset2) #the ones not found in my data
 
-#check rownames
+#checking rownames
 head(rownames(sampleLabel))  
 head(sampleLabel$sampleID)  
 rownames(sampleLabel) <- sampleLabel$sampleID 
 
 clean_labeled_sample<-labeled_sample[, c("SampleID", "is_blank", "DominantSpecies", "sampleType")] #removing the collumns that I don't want
-#View(sample_data(fungal_physeq_subset))
 head(sample_data(fungal_physeq_subset))
 head(clean_labeled_sample)
-#View((clean_labeled_sample))
 
-#rownames(clean_labeled_sample) <- sample_names(fungal_physeq_subset)
-#nrow(clean_labeled_sample)
-
-#sample_data(fungal_physeq_subset) <- clean_labeled_sample
 head(sample_names(fungal_physeq_subset))
 head(rownames(clean_labeled_sample))
 nrow(clean_labeled_sample)
@@ -370,6 +270,8 @@ randomrowsFungus <- sample(1:nrow(tax_table(fungal_physeq_subset)), 5)
 randomTaxaFungus <- tax_table(fungal_physeq_subset)[randomrowsFungus, ]
 randomTaxaFungus[, c("sequence", "Species")]
 
+
+###############################################################################################
 #creating a new phyloseq object with updated sample table
 fungal2.0 <- fungal_physeq_subset
 rownames(cl_labeled_sample) <- cl_labeled_sample$SampleID
@@ -386,7 +288,7 @@ vaginal_sample_data_phyloseq <- fungalSample %>%
 vaginal_fungal_otu <- fungalOTU[rownames(vaginal_sample_data_phyloseq), , drop = FALSE]
 vaginal_fungal_taxa <- fungalTaxa[colnames(vaginal_fungal_otu), , drop = FALSE]
 
-#vaginal phyloseq obj
+####################vaginal phyloseq obj
 vaginal_phyloseq <- phyloseq(otu_table(vaginal_fungal_otu, taxa_are_rows=FALSE), 
                              sample_data(vaginal_sample_data_phyloseq), tax_table(vaginal_fungal_taxa))
 
@@ -398,7 +300,8 @@ ca_abund <- rowSums( otu_table(ca_phy)[ , , drop = FALSE ] )
 sample_data(vaginal_phyloseq_rel)$CA_abund <- ca_abund[ sample_names(vaginal_phyloseq_rel) ]
 
 
-
+###############################################################################################
+#trying to plot shannon and colored by dominant species
 #Alpha Diversity
 alpha_div <- estimate_richness(fungal_physeq_subset, measures = c("Shannon"))
 
@@ -412,12 +315,11 @@ plot_richness(fungal_physeq_subset, x = "SampleID", color = "DominantSpecies", m
   ggtitle("Alpha Diversity Colored by Dominant Species")
 #this looks chaotic
 
+###############################################################################################
 #creating the sampledata as a data frame
 fungalSample <- sampleClean
 fungalSample$Shannon <- alpha_div[[1]]
 colnames(fungalSample)
-#colnames(fungalSample)[4] <- "Shannon"
-View(fungalSample)
 summary(fungalSample)
 hist(fungalSample$Shannon) 
 summary(fungalSample$sampleType == "vaginal")
@@ -435,7 +337,7 @@ VaginalSample <- fungalSamplecl %>%
   filter(sampleType == "vaginal")
 
 dim(VaginalSample)
-
+###############################################################################################
 #group vaginal sample by participants
 groupedVaginal <- VaginalSample %>%
   group_by(biome_id) %>%
@@ -445,7 +347,7 @@ groupedVaginal <- VaginalSample %>%
     dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
   )
 #View(groupedVaginal)
-
+###############################################################################################
 #extracting fecal sample
 FecalSample <- fungalSamplecl %>% 
   filter(sampleType == "fecal")
@@ -458,14 +360,12 @@ groupedFecal <- FecalSample %>%
     n_samples = n(),
     dominantSpecies = names(sort(table(DominantSpecies), decreasing = TRUE))[1]
   )
-#View(groupedFecal)
 
 dim(FecalSample)
 
 #boxplot by participants
-?boxplot()
 boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon, names = c("vaginal", "fecal"), main = "Shannon by Participants")
-
+###############################################################################################
 sort(table(VaginalSample$DominantSpecies)) 
 #Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
 
@@ -482,12 +382,10 @@ groupedSampleP <- fungalSample %>%
     n_samples = n()
   )
 
-#View(groupedSampleP) 
-
 table(groupedVaginal$dominantSpecies)
 table(groupedFecal$dominantSpecies)
 
-
+###############################################################################################
 #DASS importing
 #file_path <- file.choose()
 #file.info(file_path)
@@ -498,7 +396,6 @@ id_mapping <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/Original Study
 
 
 ### Map uid to study id
-
 # Get unique study and biome health pairings
 study_and_u_id <- unique(id_mapping %>% 
                            select(STUDY.ID, Biome.Health.App.ID))
@@ -523,7 +420,6 @@ missing_list <- dass_data %>%
 print(unique(missing_list$biome_id))
 
 dim(dass_data)
-#View(dass_data)
 
 ### Save final data output
 write.csv(dass_data,
@@ -644,12 +540,11 @@ dass$stressseverity[dass$stress_score>=19 & dass$stress_score<=25] <- 2
 dass$stressseverity[dass$stress_score>=26 & dass$stress_score<=33] <- 3
 dass$stressseverity[dass$stress_score>=34] <- 4
 
-View(dass)
 plot(dass$Timestamp, dass$stress_score)
 smoothingSpline = smooth.spline(dass$Timestamp, dass$stress_score, spar=0.35)
 lines(smoothingSpline)
 
-
+###############################################################################################
 # average stress score
 dass.avg <- dass %>% 
   group_by(biome_id) %>% 
@@ -659,10 +554,7 @@ dass.avg <- dass %>%
     avg_stress=sum(stress_score)/n()
   )  
 
-View(dass.avg)
-View(groupedSampleP)
-
-
+#mapping average shannon and dass together
 shannonDassbyP <- merge(groupedSampleP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
 lmDepr <- lm(avg_Shannon ~ avg_depr, data = shannonDassbyP)
@@ -673,8 +565,6 @@ summary(lmAnx) #pval = 0.7, adj r sqr = -0.01
 
 lmStr <- lm(avg_Shannon ~ avg_stress, data = shannonDassbyP)
 summary(lmStr) #pval = 0.228, adj r sqr = 0.007
-
-
 
 ggplot(shannonDassbyP) +
   geom_point(aes(x = avg_depr, y = avg_Shannon, color = "Depression"), size = 2) +
