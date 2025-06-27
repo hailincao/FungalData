@@ -176,7 +176,7 @@ sample_data(fungal_physeq_subset)$DominantSpecies
 #check the class of the object we created
 summary(fungal_physeq_subset)
 #the sample data part of our object
-View(sample_data(fungal_physeq_subset))
+#View(sample_data(fungal_physeq_subset))
 #sort the most frequently appeared species in the sample data
 sort(table(sample_data(fungal_physeq_subset)$DominantSpecies))  # Candida_albicans  the most frequently appeared
 
@@ -197,7 +197,7 @@ taxaF@.Data["074f81db997e702d17c85be0c46b03ad", "Species"] #it's Candida_albican
 #4.3
 sampleLabel<-read_excel("/Users/caoyang/Desktop/Tetel Lab/cleaned_samplesv2.xlsx")
 sampleLabel$sampleID <- sampleLabel$qr
-sampleLabel <- sampleLabel[, c("sampleID", "biome_id", "sampleType")]
+sampleLabel <- sampleLabel[, c("sampleID", "biome_id", "sampleType", "logDate")]
 
 temp <- t(otu_table(fungal_physeq_subset))
 temp[1:10, 1:10]
@@ -365,6 +365,19 @@ dim(FecalSample)
 
 #boxplot by participants
 boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon, names = c("vaginal", "fecal"), main = "Shannon by Participants")
+boxplot(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon,
+        names = c("vaginal", "fecal"),
+        main = "Shannon by Participants",
+        ylab = "Shannon Index",
+        col = c("#FF9999", "#9999FF"))
+
+# Add jittered points
+stripchart(list(groupedVaginal$avg_Shannon, groupedFecal$avg_Shannon),
+           method = "jitter",
+           pch = 16,       # filled circles
+           col = rgb(0, 0, 0, 0.5), # semi-transparent black
+           vertical = TRUE,
+           add = TRUE)
 ###############################################################################################
 sort(table(VaginalSample$DominantSpecies)) 
 #Candida_albicans 655 empty 193 globosa 94 restricta 80 arunalokei 18 Malassezia_globosa 17 Candida_parapsilosis 16
@@ -571,11 +584,11 @@ ggplot(shannonDassbyP) +
   geom_point(aes(x = avg_anx, y = avg_Shannon, color = "Anxiety"), size = 2) +
   geom_point(aes(x = avg_stress, y = avg_Shannon, color = "Stress"), size = 2) +
   geom_smooth(aes(x = avg_depr, y = avg_Shannon, color = "Depression"),
-              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+              method = "loess", se = FALSE, span = 0.75, size = 1.2) +
   geom_smooth(aes(x = avg_anx, y = avg_Shannon, color = "Anxiety"),
-              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+              method = "loess", se = FALSE, span = 0.75, size = 1.2) +
   geom_smooth(aes(x = avg_stress, y = avg_Shannon, color = "Stress"),
-              method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE) +
+              method = "loess", se = FALSE, span = 0.75, size = 1.2) +
   scale_color_manual(
     name = "DASS",
     values = c(
@@ -585,7 +598,15 @@ ggplot(shannonDassbyP) +
     )
   ) +
   theme_classic() +
-  labs(x = "DASS Score", y = "Shannon Diversity Index")
+  labs(
+    title = "Relationship Between DASS Scores and Shannon Diversity",
+    x = "DASS Score", 
+    y = "Shannon Diversity Index"
+  ) +
+  xlim(0, 40)
+
+
+
 
 ###########################################################################
 
@@ -664,6 +685,40 @@ ggplot(dassCAplot, aes(x = Score, y = CA_abund, color = ScoreType)) +
     panel.grid.minor = element_blank()
   )
 
+
+ggplot(dassCAplot, aes(
+  x = Score,
+  y = CA_abund,
+  color = recode(ScoreType,
+                 "depression_score" = "Depression",
+                 "anxiety_score" = "Anxiety",
+                 "stress_score.x" = "Stress"))
+) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "loess", se = FALSE, span = 0.75, size = 1.2) +
+  scale_color_manual(
+    values = c(
+      "Depression" = "blue", 
+      "Anxiety" = "red", 
+      "Stress" = "green"
+    )
+  ) +
+  labs(
+    title = "Relationship Between DASS Scores and C. albicans Abundance",
+    x = "DASS Score",
+    y = "C. albicans Relative Abundance",
+    color = "Score Type"
+  ) +
+  xlim(0, 50) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+
 #checking p-val, non of them significant
 dassCAplot %>%
   group_by(ScoreType) %>%
@@ -708,11 +763,240 @@ sample_data(fungal2.0)$Candida_abundance <- fungal2.0 %>%
   }
 
 
+#######################################################################
+#merging merging merging vaginal data
+
+# #merging sample_data(fungal2.0) with the logDate that Nicky found
+# sample_df <- data.frame(sample_data(fungal2.0))
+# merged_sample_df <- sample_df %>%
+#   left_join(hbcmerged_df %>% select(SampleID, biome_id, logDate),
+#             by = c("SampleID", "biome_id"))
+# rownames(merged_sample_df) <- merged_sample_df$SampleID
+# sample_data(fungal2.0) <- sample_data(merged_sample_df)
+
+#reading in bacteria data
+bacteria_abundance <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/microbiome_crosstalk_merged_abund.csv")
+
+#separating gut and vaginal part for merge
+fungal_sample_df <- data.frame(sample_data(fungal2.0))
+# Subset to vaginal samples
+fungal_vaginal <- fungal_sample_df %>%
+  filter(sampleType == "vaginal")
+# Subset to gut samples
+fungal_gut <- fungal_sample_df %>%
+  filter(sampleType == "fecal")
+
+#mutating names
+fungal_vaginal <- fungal_vaginal %>%
+  rename(calbican_rel_abundance_vag = Candida_abundance)
+
+fungal_gut <- fungal_gut %>%
+  rename(calbican_rel_abundance_gut = Candida_abundance)
+
+vag_abund <- fungal_vaginal %>%
+  select(biome_id, logDate, calbican_rel_abundance_vag)
+
+gut_abund <- fungal_gut %>%
+  select(biome_id, logDate, calbican_rel_abundance_gut)
+
+bacteria_abundance <- bacteria_abundance %>%
+  mutate(logDate = as.Date(logDate))
+
+vag_abund <- vag_abund %>%
+  mutate(logDate = as.Date(logDate))
+
+gut_abund <- gut_abund %>%
+  mutate(logDate = as.Date(logDate))
+
+#using the first sample for each participant on a certain day
+vag_abund_unique <- vag_abund %>%
+  arrange(biome_id, logDate) %>%
+  group_by(biome_id, logDate) %>%
+  slice(1) %>% ungroup()
+
+gut_abund_unique <- gut_abund %>%
+  arrange(biome_id, logDate) %>%
+  group_by(biome_id, logDate) %>%
+  slice(1) %>% ungroup()
+
+bacteria_abundance_merged <- bacteria_abundance %>%
+  left_join(vag_abund_unique, by = c("biome_id", "logDate")) %>%
+  left_join(gut_abund_unique, by = c("biome_id", "logDate"))
+
+#####################################################################
+#correlation between c.albicans and lactobacillus
+#548/1287 of the rows are NA for vaginal c.albicans abundance
+cor_df <- bacteria_abundance_merged %>%
+  filter(!is.na(calbican_rel_abundance_vag))
+ggplot(cor_df, aes(x = lacto_rel_abundance_vag, y = calbican_rel_abundance_vag)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "Vaginal Lactobacillus Abundance",
+       y = "Vaginal C. albicans Relative Abundance",
+       title = "Correlation between Lactobacillus and C. albicans in Vagina") +
+  theme_minimal()
+
+ggplot(cor_df, aes(x = lacto_rel_abundance_gut, y = calbican_rel_abundance_vag)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "Gut Lactobacillus Abundance",
+       y = "Vaginal C. albicans Relative Abundance",
+       title = "Correlation between Lactobacillus in Gut and C. albicans in Vagina") +
+  theme_minimal()
+
+#correlation between Alistipes putredinis and C.albicans
+ggplot(cor_df, aes(x = putredinis_rel_abundance_vag, y = calbican_rel_abundance_vag)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "Vaginal A.putredinis Abundance",
+       y = "Vaginal C. albicans Relative Abundance",
+       title = "Correlation between A.putredinis and C. albicans in Vagina") +
+  theme_minimal()
+
+ggplot(cor_df, aes(x = putredinis_rel_abundance_gut, y = calbican_rel_abundance_gut)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "Gut A.putredinis Abundance",
+       y = "Gut C.albicans Relative Abundance",
+       title = "Correlation between A.putredinis in Gut and C. albicans in Gut") +
+  theme_minimal()
 
 
+###############################################################################
+#C.albicans abundance by CST
+CST_df <- bacteria_abundance_merged %>%
+  filter(!is.na(CST))
+
+ggplot(CST_df, aes(x = CST, y = calbican_rel_abundance_vag, fill = CST)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.5, color = "black", size = 1) +
+  labs(
+    title = "Distribution of C.albican Relative Abundance by Vaginal Microbiome CST per sample",
+    x = "Vaginal CST",
+    y = "C.albicans Relative Abundance"
+  ) +
+  theme_minimal()
 
 
+ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_vag, color = CST)) +
+  geom_point(alpha = 0.6, size = 1.8) +
+  geom_smooth(method = "loess", se = FALSE, size = 1) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Candida albicans Abundance by CST",
+    x = "Date",
+    y = "C.Albicans Relative Abundance"
+  ) +
+  theme_minimal()
 
 
+#check who have CSTV
+bacteria_abundance_merged %>%
+  filter(CST == "V") %>%
+  distinct(biome_id)
+
+df_62 <- bacteria_abundance_merged%>%
+  filter(biome_id == 62) 
+
+df_62_long <- df_62 %>%
+  select(logDate, CST, calbican_rel_abundance_vag, calbican_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = starts_with("calbican_rel_abundance"),
+    names_to = "Site",
+    values_to = "Abundance"
+  ) %>%
+  filter(!is.na(logDate), !is.na(Abundance), is.finite(Abundance))
+
+cst_rects62 <- df_62_long %>%
+  distinct(logDate, CST)
+
+# Plot
+ggplot(df_62_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
+  geom_tile(
+    data = cst_rects62,
+    aes(x = logDate, y = 0, fill = CST),
+    width = 0.9, height = Inf, alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_point(size = 2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  scale_color_manual(
+    values = c(
+      "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
+      "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
+    ),
+    labels = c("Vagina", "Gut")
+  ) +
+  scale_fill_manual(
+    values = c(
+      "I" = "#1b9e77",
+      "II" = "#d95f02",
+      "III" = "#7570b3",
+      "IV" = "#e7298a",
+      "V" = "#66a61e"
+    ),
+    na.value = "white"
+  ) +
+  labs(
+    title = "Candida albicans Abundance Over Time (Participant 62)",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Site",
+    fill = "CST"
+  ) +
+  theme_minimal()
+###################################################################
+#cross-site c.albicans abundance
+ggplot(bacteria_abundance_merged, aes(x = calbican_rel_abundance_gut, 
+                     y = calbican_rel_abundance_vag)) +
+  geom_point(alpha = 0.6, size = 2, color = "blue") +
+  geom_smooth(method = "loess", se = FALSE, color = "black", linewidth = 1.2) +
+  labs(
+    title = "Overall Relationship Between Gut and Vaginal C.albicans Abundance",
+    x = "Gut C.albicans Relative Abundance",
+    y = "Vaginal C.albicans Relative Abundance"
+  ) +
+  theme_minimal()
+
+
+cross_long <- bacteria_abundance_merged %>%
+  select(logDate, calbican_rel_abundance_gut, calbican_rel_abundance_vag, taken_antibiotics) %>%
+  pivot_longer(cols = starts_with("calbican_rel_abundance"),
+               names_to = "Site",
+               values_to = "Abundance") %>%
+  mutate(Site = recode(Site,
+                       "calbican_rel_abundance_gut" = "Gut",
+                       "calbican_rel_abundance_vag" = "Vagina"))
+
+
+ggplot(cross_long, aes(x = logDate, y = Abundance, color = Site)) +
+  geom_point(alpha = 0.5) +             # show points, maybe with some transparency
+  geom_smooth(se = FALSE, method = "loess", span = 0.5) +  # smooth line
+  labs(title = "C.albicans Abundance Over Time in Two Sites",
+       x = "Time",
+       y = "Relative Abundance",
+       color = "Site") +
+  theme_minimal()
+
+#taking antibiotics into account
+# Antibiotic group
+cross_long_anti1 <- cross_long %>% filter(taken_antibiotics == 1)
+# No antibiotic group
+cross_long_anti0 <- cross_long %>% filter(taken_antibiotics == 0)
+
+# Plot for antibiotic group
+p1 <- ggplot(cross_long_anti1, aes(x = logDate, y = Abundance, color = Site)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(se = FALSE, method = "loess", span = 0.7) +
+  labs(title = "Without Antibiotic Use",
+       x = "Time", y = "Relative Abundance") +
+  theme_minimal()
+
+# Plot for no antibiotic group
+p2 <- ggplot(cross_long_anti0, aes(x = logDate, y = Abundance, color = Site)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(se = FALSE, method = "loess", span = 0.7) +
+  labs(title = "With Antibiotic Use",
+       x = "Time", y = "Relative Abundance") +
+  theme_minimal()
+
+# Show them side-by-side (optional)
+library(patchwork)
+p1 + p2
 
 
