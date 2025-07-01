@@ -998,5 +998,186 @@ p2 <- ggplot(cross_long_anti0, aes(x = logDate, y = Abundance, color = Site)) +
 # Show them side-by-side (optional)
 library(patchwork)
 p1 + p2
+###################################################################
+#the ones who's taking SSRI
+
+df_60 <- bacteria_abundance_merged%>%
+  filter(biome_id == 60) 
+
+df_60_long <- df_60 %>%
+  select(logDate, CST, calbican_rel_abundance_vag, calbican_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = starts_with("calbican_rel_abundance"),
+    names_to = "Site",
+    values_to = "Abundance"
+  ) %>%
+  filter(!is.na(logDate), !is.na(Abundance), is.finite(Abundance))
+
+cst_rects60 <- df_60_long %>%
+  distinct(logDate, CST)
+
+# Plot
+ggplot(df_60_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
+  geom_tile(
+    data = cst_rects60,
+    aes(x = logDate, y = 0, fill = CST),
+    width = 0.9, height = Inf, alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_point(size = 2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  scale_color_manual(
+    values = c(
+      "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
+      "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
+    ),
+    labels = c("Vagina", "Gut")
+  ) +
+  scale_fill_manual(
+    values = c(
+      "I" = "#1b9e77",
+      "II" = "#d95f02",
+      "III" = "#7570b3",
+      "IV" = "#e7298a",
+      "V" = "#66a61e"
+    ),
+    na.value = "white"
+  ) +
+  labs(
+    title = "Candida albicans Abundance Over Time (Participant 60 SSRI)",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Site",
+    fill = "CST"
+  ) +
+  theme_minimal()
+
+
+df_75 <- bacteria_abundance_merged%>%
+  filter(biome_id == 75) 
+df_75_long <- df_75 %>%
+  select(logDate, CST, calbican_rel_abundance_vag, calbican_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = starts_with("calbican_rel_abundance"),
+    names_to = "Site",
+    values_to = "Abundance"
+  ) %>%
+  filter(!is.na(logDate), !is.na(Abundance), is.finite(Abundance))
+cst_rects75 <- df_75_long %>%
+  distinct(logDate, CST)
+ggplot(df_75_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
+  geom_tile(
+    data = cst_rects75,
+    aes(x = logDate, y = 0, fill = CST),
+    width = 0.9, height = Inf, alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_point(size = 2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  scale_color_manual(
+    values = c(
+      "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
+      "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
+    ),
+    labels = c("Vagina", "Gut")
+  ) +
+  scale_fill_manual(
+    values = c(
+      "I" = "#1b9e77",
+      "II" = "#d95f02",
+      "III" = "#7570b3",
+      "IV" = "#e7298a",
+      "V" = "#66a61e"
+    ),
+    na.value = "white"
+  ) +
+  labs(
+    title = "Candida albicans Abundance Over Time (Participant 75 SSRI)",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Site",
+    fill = "CST"
+  ) +
+  theme_minimal()
+
+
+
+
+
+
+df_18 <- bacteria_abundance_merged%>%
+  filter(biome_id == 18) 
+
+df_18_long <- df_18 %>%
+  select(logDate, CST, calbican_rel_abundance_vag, calbican_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = starts_with("calbican_rel_abundance"),
+    names_to = "Site",
+    values_to = "Abundance"
+  ) %>%
+  filter(!is.na(logDate), !is.na(Abundance), is.finite(Abundance))
+
+cst_rects18 <- df_18_long %>%
+  distinct(logDate, CST)
+
+# Plot
+ggplot(df_18_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
+  geom_tile(
+    data = cst_rects18,
+    aes(x = logDate, y = 0, fill = CST),
+    width = 0.9, height = Inf, alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_point(size = 2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+  scale_color_manual(
+    values = c(
+      "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
+      "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
+    ),
+    labels = c("Vagina", "Gut")
+  ) +
+  scale_fill_manual(
+    values = c(
+      "I" = "#1b9e77",
+      "II" = "#d95f02",
+      "III" = "#7570b3",
+      "IV" = "#e7298a",
+      "V" = "#66a61e"
+    ),
+    na.value = "white"
+  ) +
+  labs(
+    title = "Candida albicans Abundance Over Time (Participant 18 adderall)",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Site",
+    fill = "CST"
+  ) +
+  theme_minimal()
+################################################################################
+#all the samples of the one's who's taking SSRI, attempt
+selected_ids <- c(14, 30, 60, 24, 73, 75)
+SSRIs_df <- bacteria_abundance_merged %>%
+  filter(biome_id %in% selected_ids)
+SSRIs_long <- SSRIs_df %>%
+  select(logDate, biome_id, calbican_rel_abundance_gut, calbican_rel_abundance_vag, taken_antibiotics) %>%
+  pivot_longer(cols = starts_with("calbican_rel_abundance"),
+               names_to = "Site",
+               values_to = "Abundance") %>%
+  mutate(Site = recode(Site,
+                       "calbican_rel_abundance_gut" = "Gut",
+                       "calbican_rel_abundance_vag" = "Vagina"))
+
+ggplot(SSRIs_long, aes(x = logDate, y = Abundance, color = Site)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(title = "C.albicans Abundance Over Time in Participants who has reported using SSRIs",
+       x = "Time",
+       y = "Relative Abundance",
+       color = "Site") +
+  theme_minimal()
+
+
+
+
+
 
 
