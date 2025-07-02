@@ -762,6 +762,17 @@ sample_data(fungal2.0)$Candida_abundance <- fungal2.0 %>%
     candida_counts / sample_sums(.)
   }
 
+#######################################################################
+#adding a column for shannon diversity
+shannon_df <- estimate_richness(fungal2.0, measures = "Shannon") %>%
+  rownames_to_column(var = "SampleID")
+meta_df <- sample_data(fungal2.0) %>%
+  data.frame()
+merged_df <- left_join(meta_df, shannon_df, by = "SampleID")
+sample_data(fungal2.0) <- merged_df %>%
+  column_to_rownames(var = "SampleID") %>%
+  sample_data()
+
 
 #######################################################################
 #merging merging merging vaginal data
@@ -788,16 +799,18 @@ fungal_gut <- fungal_sample_df %>%
 
 #mutating names
 fungal_vaginal <- fungal_vaginal %>%
-  rename(calbican_rel_abundance_vag = Candida_abundance)
+  rename(calbican_rel_abundance_vag = Candida_abundance) %>%
+  rename(Shannon_vag = Shannon)
 
 fungal_gut <- fungal_gut %>%
-  rename(calbican_rel_abundance_gut = Candida_abundance)
+  rename(calbican_rel_abundance_gut = Candida_abundance) %>%
+  rename(Shannon_gut = Shannon)
 
 vag_abund <- fungal_vaginal %>%
-  select(biome_id, logDate, calbican_rel_abundance_vag)
+  select(biome_id, logDate, calbican_rel_abundance_vag, Shannon_vag)
 
 gut_abund <- fungal_gut %>%
-  select(biome_id, logDate, calbican_rel_abundance_gut)
+  select(biome_id, logDate, calbican_rel_abundance_gut, Shannon_gut)
 
 bacteria_abundance <- bacteria_abundance %>%
   mutate(logDate = as.Date(logDate))
@@ -1154,29 +1167,57 @@ ggplot(df_18_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
   theme_minimal()
 ################################################################################
 #all the samples of the one's who's taking SSRI, attempt
-selected_ids <- c(14, 30, 60, 24, 73, 75)
-SSRIs_df <- bacteria_abundance_merged %>%
-  filter(biome_id %in% selected_ids)
-SSRIs_long <- SSRIs_df %>%
-  select(logDate, biome_id, calbican_rel_abundance_gut, calbican_rel_abundance_vag, taken_antibiotics) %>%
-  pivot_longer(cols = starts_with("calbican_rel_abundance"),
-               names_to = "Site",
-               values_to = "Abundance") %>%
-  mutate(Site = recode(Site,
-                       "calbican_rel_abundance_gut" = "Gut",
-                       "calbican_rel_abundance_vag" = "Vagina"))
+ssri_users <- c(14, 30, 60, 24, 73, 75)
+ssridf <- bacteria_abundance_merged %>%
+  mutate(
+    SSRI_status = if_else(biome_id %in% ssri_users, "SSRI User", "Non-User")
+  )
 
-ggplot(SSRIs_long, aes(x = logDate, y = Abundance, color = Site)) +
-  geom_point(alpha = 0.5) +
+ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
   geom_smooth(se = FALSE, method = "loess") +
-  labs(title = "C.albicans Abundance Over Time in Participants who has reported using SSRIs",
-       x = "Time",
-       y = "Relative Abundance",
-       color = "Site") +
+  labs(
+    title = "Vaginal Candida albicans Abundance Over Time",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
   theme_minimal()
 
 
+wilcox.test(
+  calbican_rel_abundance_vag ~ SSRI_status,
+  data = ssridf
+)
 
+ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Gut Candida albicans Abundance Over Time",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+wilcox.test(
+  calbican_rel_abundance_gut ~ SSRI_status,
+  data = ssridf
+)
+
+
+#boxplot of vaginal shannon diversity
+ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, fill = SSRI_status)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # hide default outliers
+  geom_jitter(width = 0.15, size = 2, alpha = 0.7) +
+  labs(
+    title = "Vaginal Shannon Diversity by SSRI Use",
+    x = "SSRI Status",
+    y = "Shannon Diversity"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 
 
 
