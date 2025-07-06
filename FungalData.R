@@ -11,6 +11,8 @@ library(tidyverse)
 library(Matrix)
 library(readxl)
 library(magrittr)
+library(lme4)
+library(lmerTest)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -1043,7 +1045,7 @@ ggplot(df_60_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
       "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
       "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
     ),
-    labels = c("Vagina", "Gut")
+    labels = c("Gut", "Vagina")
   ) +
   scale_fill_manual(
     values = c(
@@ -1065,9 +1067,9 @@ ggplot(df_60_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
   theme_minimal()
 
 
-df_75 <- bacteria_abundance_merged%>%
-  filter(biome_id == 75) 
-df_75_long <- df_75 %>%
+df_44 <- bacteria_abundance_merged%>%
+  filter(biome_id == 44) 
+df_44_long <- df_44 %>%
   select(logDate, CST, calbican_rel_abundance_vag, calbican_rel_abundance_gut) %>%
   pivot_longer(
     cols = starts_with("calbican_rel_abundance"),
@@ -1075,11 +1077,11 @@ df_75_long <- df_75 %>%
     values_to = "Abundance"
   ) %>%
   filter(!is.na(logDate), !is.na(Abundance), is.finite(Abundance))
-cst_rects75 <- df_75_long %>%
+cst_rects44 <- df_44_long %>%
   distinct(logDate, CST)
-ggplot(df_75_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
+ggplot(df_44_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) +
   geom_tile(
-    data = cst_rects75,
+    data = cst_rects44,
     aes(x = logDate, y = 0, fill = CST),
     width = 0.9, height = Inf, alpha = 0.2, inherit.aes = FALSE
   ) +
@@ -1090,7 +1092,7 @@ ggplot(df_75_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
       "calbican_rel_abundance_vag" = "#e41a1c",   # red-ish
       "calbican_rel_abundance_gut" = "#377eb8"    # blue-ish
     ),
-    labels = c("Vagina", "Gut")
+    labels = c("Gut", "Vagina")
   ) +
   scale_fill_manual(
     values = c(
@@ -1103,7 +1105,7 @@ ggplot(df_75_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
     na.value = "white"
   ) +
   labs(
-    title = "Candida albicans Abundance Over Time (Participant 75 SSRI)",
+    title = "Candida albicans Abundance Over Time (Participant 44 non-SSRI)",
     x = "Date",
     y = "Relative Abundance",
     color = "Site",
@@ -1167,11 +1169,29 @@ ggplot(df_18_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
   theme_minimal()
 ################################################################################
 #all the samples of the one's who's taking SSRI, attempt
-ssri_users <- c(14, 30, 60, 24, 73, 75)
+ssri_users <- c(11,14,16,24,27,28,30,33,51,60,73)
 ssridf <- bacteria_abundance_merged %>%
   mutate(
     SSRI_status = if_else(biome_id %in% ssri_users, "SSRI User", "Non-User")
   )
+
+all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
+ssridf$study_day <- match(as.Date(ssridf$logDate), all_days) -1
+
+ssridf <- ssridf %>%
+  mutate(day_c = scale(study_day, center = TRUE, scale = FALSE))
+
+# ggplot(ssridf, aes(x = logDate, y = lacto_rel_abundance_vag, color = SSRI_status)) +
+#   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+#   geom_smooth(se = FALSE, method = "loess") +
+#   labs(
+#     title = "Vaginal Lactobacillus Abundance Over Time",
+#     x = "Date",
+#     y = "Relative Abundance",
+#     color = "SSRI Use"
+#   ) +
+#   theme_minimal()
+
 
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
@@ -1185,10 +1205,29 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_sta
   theme_minimal()
 
 
-wilcox.test(
-  calbican_rel_abundance_vag ~ SSRI_status,
-  data = ssridf
-)
+
+
+
+# Make sure SSRI_status is a factor
+ssridf$SSRI_status <- factor(ssridf$SSRI_status)
+library(performance)
+
+ssri_v <- lmer(calbican_rel_abundance_vag ~ SSRI_status + day_c + I(day_c^2) + (1| biome_id), data = ssridf)
+summary(ssri_v)
+
+ssri_shannonV <- lmer(Shannon_vag ~ SSRI_status + day_c + I(day_c^2) + (1| biome_id), data = ssridf)
+summary(ssri_shannonV)
+
+ssri_g <- lmer(calbican_rel_abundance_gut ~ SSRI_status + day_c + I(day_c^2) + (1| biome_id), data = ssridf)
+summary(ssri_g)
+r2(ssri_g)
+
+
+
+# wilcox.test(
+#   calbican_rel_abundance_vag ~ SSRI_status,
+#   data = ssridf
+# )
 
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
@@ -1201,10 +1240,10 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, color = SSRI_sta
   ) +
   theme_minimal()
 
-wilcox.test(
-  calbican_rel_abundance_gut ~ SSRI_status,
-  data = ssridf
-)
+# wilcox.test(
+#   calbican_rel_abundance_gut ~ SSRI_status,
+#   data = ssridf
+# )
 
 
 #boxplot of vaginal shannon diversity
@@ -1212,13 +1251,65 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, fill = SSRI_status)) +
   geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # hide default outliers
   geom_jitter(width = 0.15, size = 2, alpha = 0.7) +
   labs(
-    title = "Vaginal Shannon Diversity by SSRI Use",
+    title = "Vaginal Mycobiome Shannon Diversity by SSRI Use",
     x = "SSRI Status",
     y = "Shannon Diversity"
   ) +
   theme_minimal() +
   theme(legend.position = "none")
 
+library(ggforce)
 
+library(scales)        # for percent_format
+library(viridis)       # for color scales
+
+ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, color = SSRI_status)) +
+  geom_sina(alpha = 0.7, size = 2) +
+  stat_summary(fun = median, geom = "crossbar", width = 0.3, color = "black") +  # show median line
+  labs(
+    title = "Vaginal Mycobiome Shannon Diversity by SSRI Use",
+    x = "SSRI Status",
+    y = "Shannon Diversity"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+#gut
+ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, fill = SSRI_status)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # hide default outliers
+  geom_jitter(width = 0.15, size = 2, alpha = 0.7) +
+  labs(
+    title = "Gut Mycobiome Shannon Diversity by SSRI Use",
+    x = "SSRI Status",
+    y = "Shannon Diversity"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, color = SSRI_status)) +
+  geom_sina(alpha = 0.7, size = 2) +
+  stat_summary(fun = median, geom = "crossbar", width = 0.3, color = "black") +  # show median line
+  labs(
+    title = "Gut Mycobiome Shannon Diversity by SSRI Use",
+    x = "SSRI Status",
+    y = "Shannon Diversity"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+#CST and SSRI
+ggplot(ssridf, aes(x = SSRI_status, fill = CST)) +
+  geom_bar(position = "fill") +  # proportion bars
+  labs(title = "Distribution of CST by SSRI Use",
+       x = "SSRI Status",
+       y = "Proportion",
+       fill = "CST") +
+  theme_minimal()
+
+
+
+
+#############################################################
+#Adderall Users
 
 
