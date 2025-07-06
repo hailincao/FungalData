@@ -1306,6 +1306,32 @@ ggplot(ssridf, aes(x = SSRI_status, fill = CST)) +
        fill = "CST") +
   theme_minimal()
 
+ssridf_clean <- ssridf %>% 
+  filter(!is.na(CST))
+
+ssri_counts <- ssridf_clean %>%
+  count(SSRI_status)
+
+# Plot
+ggplot(ssridf_clean, aes(x = SSRI_status, fill = CST)) +
+  geom_bar(position = "fill") +  # proportion bars
+  geom_text(data = ssri_counts,
+            aes(x = SSRI_status, y = 1.05, label = paste0("n = ", n)),
+            inherit.aes = FALSE,
+            size = 4.5) +
+  labs(title = "Distribution of CST by SSRI Use",
+       x = "SSRI Status",
+       y = "Proportion",
+       fill = "CST") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right"
+  )
+
+
+
+
 
 
 
