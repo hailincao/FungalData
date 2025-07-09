@@ -13,6 +13,10 @@ library(readxl)
 library(magrittr)
 library(lme4)
 library(lmerTest)
+library(performance)
+library(ggforce)
+library(scales)   
+library(viridis)  
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -437,9 +441,9 @@ print(unique(missing_list$biome_id))
 dim(dass_data)
 
 ### Save final data output
-write.csv(dass_data,
-          file = "/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv",
-          row.names = FALSE)
+# write.csv(dass_data,
+#           file = "/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv",
+#           row.names = FALSE)
 
 # ------------------------------------------------------------------------------
 # calculate depression, anxiety, and stress scores 
@@ -1117,7 +1121,6 @@ ggplot(df_44_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
 
 
 
-
 df_18 <- bacteria_abundance_merged%>%
   filter(biome_id == 18) 
 
@@ -1210,7 +1213,7 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_sta
 
 # Make sure SSRI_status is a factor
 ssridf$SSRI_status <- factor(ssridf$SSRI_status)
-library(performance)
+
 
 ssri_v <- lmer(calbican_rel_abundance_vag ~ SSRI_status + day_c + I(day_c^2) + (1| biome_id), data = ssridf)
 summary(ssri_v)
@@ -1258,10 +1261,6 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, fill = SSRI_status)) +
   theme_minimal() +
   theme(legend.position = "none")
 
-library(ggforce)
-
-library(scales)        # for percent_format
-library(viridis)       # for color scales
 
 ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, color = SSRI_status)) +
   geom_sina(alpha = 0.7, size = 2) +
@@ -1273,6 +1272,19 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, color = SSRI_status)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+ggplot(ssridf, aes(x = logDate, y = Shannon_vag, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Vaginal Shannon Diversity Over Time",
+    x = "Date",
+    y = "Shannon Index",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+
 
 #gut
 ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, fill = SSRI_status)) +
@@ -1296,6 +1308,17 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, color = SSRI_status)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+ggplot(ssridf, aes(x = logDate, y = Shannon_gut, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Gut Shannon Diversity Over Time",
+    x = "Date",
+    y = "Shannon Index",
+    color = "SSRI Use"
+  ) +
+  theme_minimal() 
 
 #CST and SSRI
 ggplot(ssridf, aes(x = SSRI_status, fill = CST)) +
@@ -1330,12 +1353,417 @@ ggplot(ssridf_clean, aes(x = SSRI_status, fill = CST)) +
   )
 
 
+#CST and gut shannon
+ggplot(ssridf_clean, aes(x = CST, y = Shannon_gut, fill = CST)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # Hide default outliers
+  geom_jitter(width = 0.2, size = 2, alpha = 0.7, color = "black") +  # Overlay individual points
+  scale_fill_brewer(palette = "Set3") +  # Or choose another palette
+  labs(
+    title = "Shannon Diversity in Gut Mycobiome by CST",
+    x = "CST",
+    y = "Shannon Diversity Index"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
+ggplot(ssridf_clean, aes(x = CST, y = Shannon_vag, fill = CST)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # Hide default outliers
+  geom_jitter(width = 0.2, size = 2, alpha = 0.7, color = "black") +  # Overlay individual points
+  scale_fill_brewer(palette = "Set3") +  # Or choose another palette
+  labs(
+    title = "Shannon Diversity in Vaginal Mycobiome by CST",
+    x = "CST",
+    y = "Shannon Diversity Index"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
 
 
 
 
 
 #############################################################
-#Adderall Users
+ssridf <- ssridf %>%
+  arrange(biome_id, logDate)
+
+ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id, color = SSRI_status)) +
+  geom_smooth(se = FALSE, method = "loess") +
+  ylim(0,1) +
+  geom_point(size = 1.5, alpha = 0.7) +
+  facet_wrap(~ biome_id, scales = "free_x") +  # One panel per participant
+  scale_color_manual(values = c("Non-User" = "#1b9e77", "SSRI User" = "#d95f02")) +  # customize colors
+  labs(
+    title = "Candida albicans Vaginal Abundance Over Time",
+    x = "Date",
+    y = "Relative Abundance",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    strip.text = element_text(size = 7),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  )
+
+#panel of vag CA for each participant
+example_ids <- unique(ssridf$biome_id)[51:76] #start from [1:24], then [25:50]
+
+ssridf %>%
+  filter(biome_id %in% example_ids) %>%
+  ggplot(aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id, color = SSRI_status)) +
+  geom_smooth(se = FALSE, method = "loess") +
+  ylim(0,1) +
+  geom_point(size = 1.5) +
+  facet_wrap(~ biome_id, scales = "free_x", ncol = 4) +
+  theme_minimal()
+
+#panel of gut CA for each participant
+ssridf %>%
+  filter(biome_id %in% example_ids) %>%
+  ggplot(aes(x = logDate, y = calbican_rel_abundance_gut, group = biome_id, color = SSRI_status)) +
+  geom_smooth(se = FALSE, method = "loess") +
+  ylim(0,1) +
+  geom_point(size = 1.5) +
+  facet_wrap(~ biome_id, scales = "free_x", ncol = 4) +
+  theme_minimal()
+
+
+
+#############################################################
+#joining DASS into ssridf
+library(lubridate)
+library(fuzzyjoin)
+
+cleanDass <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv")
+
+ssridf <- ssridf %>%
+  mutate(logDate = as.Date(logDate))
+
+cleanDass <- cleanDass %>%
+  mutate(Timestamp = as.Date(Timestamp))
+# Step 1: Create all combinations of samples and mood data with same participant
+combo <- ssridf %>%
+  mutate(biome_id = as.character(biome_id)) %>%
+  inner_join(
+    cleanDass %>% mutate(biome_id = as.character(biome_id)),
+    by = "biome_id"
+  ) %>%
+  mutate(
+    date_diff = as.numeric(difftime(logDate, Timestamp, units = "days")),
+    abs_diff = abs(date_diff)
+  ) %>%
+  #Step2: keep only those within ±7 days
+  filter(abs_diff <= 7)
+
+# Step 3: For each sample (logDate + biome_id), keep only the mood survey with smallest time difference
+closest_match <- combo %>%
+  group_by(biome_id, logDate) %>%
+  slice_min(abs_diff, with_ties = FALSE) %>%
+  ungroup()
+
+# Step 4: Select relevant mood columns to join back
+mood_matched <- closest_match %>%
+  select(biome_id, logDate, depression_score, anxiety_score, stress_score, depressionseverity, anxietyseverity, stressseverity)
+
+# Step 5: Left join to original sample data — unmatched samples get NA
+ssridf_with_mood <- ssridf %>%
+  mutate(biome_id = as.character(biome_id)) %>%
+  left_join(
+    mood_matched %>% mutate(biome_id = as.character(biome_id)),
+    by = c("biome_id", "logDate")
+  )
+################################################################
+#plotting dass and ssri vaginal CA
+ssridf_with_mood <- ssridf_with_mood %>%
+  mutate(logDate = as.Date(logDate)) %>%
+  filter(!is.na(depression_score), !is.na(anxiety_score), !is.na(stress_score))
+
+ssridf_with_mood <- ssridf_with_mood %>%
+  mutate(
+    depressionseverity = factor(depressionseverity,
+                                 levels = 0:4,
+                                 labels = c("Normal", "Mild", "Moderate", "Severe", "Extremely Severe")
+    )
+  )
+
+ssridf_with_mood <- ssridf_with_mood %>%
+  mutate(
+    anxietyseverity = factor(anxietyseverity,
+                                levels = 0:4,
+                                labels = c("Normal", "Mild", "Moderate", "Severe", "Extremely Severe")
+    )
+  )
+
+ssridf_with_mood <- ssridf_with_mood %>%
+  mutate(
+    stressseverity = factor(stressseverity,
+                             levels = 0:4,
+                             labels = c("Normal", "Mild", "Moderate", "Severe", "Extremely Severe")
+    )
+  )
+
+#how dass score fluctuate over time by SSRI use
+plot_mood <- function(data, mood_var) {
+  # mood_var should be one of "depression_score", "anxiety_score", or "stress_score"
+  data %>%
+    select(biome_id, logDate, SSRI_status, all_of(mood_var)) %>%
+    rename(Score = all_of(mood_var)) %>%
+    ggplot(aes(x = logDate, y = Score, color = SSRI_status)) +
+    geom_point(alpha = 0.6, size = 1.5) +
+    geom_smooth(method = "loess", se = FALSE, span = 0.75) +
+    labs(
+      title = paste0(gsub("_", " ", tools::toTitleCase(mood_var)), " Over Time by SSRI Use"),
+      x = "Date",
+      y = "Score",
+      color = "SSRI Status"
+    ) +
+    scale_color_manual(values = c("lightsalmon", "cornflowerblue")) +
+    theme_minimal(base_size = 13) +
+    theme(legend.position = "top")
+}
+
+
+plot_mood(ssridf_with_mood, "depression_score")
+plot_mood(ssridf_with_mood, "anxiety_score")
+plot_mood(ssridf_with_mood, "stress_score")
+
+#boxplots comparing vaginal CA by each category of DASS severity
+ggplot(ssridf_with_mood, aes(x = depressionseverity, y = calbican_rel_abundance_vag, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Vaginal Candida albicans Abundance by Depression Severity and SSRI Use",
+    x = "Depression Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+ggplot(ssridf_with_mood, aes(x = anxietyseverity, y = calbican_rel_abundance_vag, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Vaginal Candida albicans Abundance by Anxiety Severity and SSRI Use",
+    x = "Anxiety Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+ggplot(ssridf_with_mood, aes(x = stressseverity, y = calbican_rel_abundance_vag, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Vaginal Candida albicans Abundance by Stress Severity and SSRI Use",
+    x = "Stress Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+#vaginal CA and DASS
+ggplot(ssridf_with_mood, aes(x = depression_score, y = calbican_rel_abundance_vag, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Vaginal Candida albicans Abundance and Depression Score",
+    x = "Depression Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+ggplot(ssridf_with_mood, aes(x = anxiety_score, y = calbican_rel_abundance_vag, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Vaginal Candida albicans Abundance and Anxiety Score",
+    x = "Anxiety Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+ggplot(ssridf_with_mood, aes(x = stress_score, y = calbican_rel_abundance_vag, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Vaginal Candida albicans Abundance and Stress Score",
+    x = "Stress Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+
+
+#########################################################################
+#gut CA and DASS
+ggplot(ssridf_with_mood, aes(x = depression_score, y = calbican_rel_abundance_gut, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Gut Candida albicans Abundance and Depression Score",
+    x = "Depression Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+ggplot(ssridf_with_mood, aes(x = anxiety_score, y = calbican_rel_abundance_gut, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Gut Candida albicans Abundance and Anxiety Score",
+    x = "Anxiety Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+ggplot(ssridf_with_mood, aes(x = stress_score, y = calbican_rel_abundance_gut, color = SSRI_status)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(
+    title = "Gut Candida albicans Abundance and Stress Score",
+    x = "Stress Score",
+    y = "Relative Abundance",
+    color = "SSRI Use"
+  ) +
+  theme_minimal()
+
+
+ggplot(ssridf_with_mood, aes(x = depressionseverity, y = calbican_rel_abundance_gut, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Gut Candida albicans Abundance by Depression Severity and SSRI Use",
+    x = "Depression Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+
+ggplot(ssridf_with_mood, aes(x = anxietyseverity, y = calbican_rel_abundance_gut, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Gut Candida albicans Abundance by Anxiety Severity and SSRI Use",
+    x = "Depression Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+ggplot(ssridf_with_mood, aes(x = stressseverity, y = calbican_rel_abundance_gut, fill = SSRI_status)) +
+  geom_boxplot(
+    position = position_dodge(width = 0.75),
+    outlier.shape = NA,
+    alpha = 0.6,
+    width = 0.5
+  ) +
+  geom_jitter(
+    aes(color = SSRI_status),
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+    size = 1.5,
+    alpha = 0.6
+  ) +
+  labs(
+    title = "Gut Candida albicans Abundance by Stress Severity and SSRI Use",
+    x = "Stress Severity",
+    y = "Relative Abundance of C. albicans",
+    fill = "SSRI Status",
+    color = "SSRI Status"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+################################################################################
+#ssri and depression
 
 
