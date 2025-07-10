@@ -17,6 +17,11 @@ library(performance)
 library(ggforce)
 library(scales)   
 library(viridis)  
+library(patchwork)
+library(lubridate)
+library(fuzzyjoin)
+#remotes::install_github("david-barnett/microViz")
+library(microViz)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -806,17 +811,20 @@ fungal_gut <- fungal_sample_df %>%
 #mutating names
 fungal_vaginal <- fungal_vaginal %>%
   rename(calbican_rel_abundance_vag = Candida_abundance) %>%
-  rename(Shannon_vag = Shannon)
+  rename(Shannon_vag = Shannon) %>%
+  rename(dominant_species_fungal_vag = DominantSpecies)
 
 fungal_gut <- fungal_gut %>%
   rename(calbican_rel_abundance_gut = Candida_abundance) %>%
-  rename(Shannon_gut = Shannon)
+  rename(Shannon_gut = Shannon) %>%
+  rename(dominant_species_fungal_gut = DominantSpecies)
+
 
 vag_abund <- fungal_vaginal %>%
-  select(biome_id, logDate, calbican_rel_abundance_vag, Shannon_vag)
+  select(biome_id, logDate, calbican_rel_abundance_vag, Shannon_vag, dominant_species_fungal_vag)
 
 gut_abund <- fungal_gut %>%
-  select(biome_id, logDate, calbican_rel_abundance_gut, Shannon_gut)
+  select(biome_id, logDate, calbican_rel_abundance_gut, Shannon_gut, dominant_species_fungal_gut)
 
 bacteria_abundance <- bacteria_abundance %>%
   mutate(logDate = as.Date(logDate))
@@ -1015,7 +1023,6 @@ p2 <- ggplot(cross_long_anti0, aes(x = logDate, y = Abundance, color = Site)) +
   theme_minimal()
 
 # Show them side-by-side (optional)
-library(patchwork)
 p1 + p2
 ###################################################################
 #the ones who's taking SSRI
@@ -1214,7 +1221,7 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_sta
 # Make sure SSRI_status is a factor
 ssridf$SSRI_status <- factor(ssridf$SSRI_status)
 
-
+#linear mixed effect model of CA/Shannon and SSRI status
 ssri_v <- lmer(calbican_rel_abundance_vag ~ SSRI_status + day_c + I(day_c^2) + (1| biome_id), data = ssridf)
 summary(ssri_v)
 
@@ -1226,12 +1233,12 @@ summary(ssri_g)
 r2(ssri_g)
 
 
-
+#don't use rank sum test because each participant submit multiple samples
 # wilcox.test(
 #   calbican_rel_abundance_vag ~ SSRI_status,
 #   data = ssridf
 # )
-
+#fluctuation of CA gut over time by SSRI
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
   geom_smooth(se = FALSE, method = "loess") +
@@ -1261,7 +1268,7 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, fill = SSRI_status)) +
   theme_minimal() +
   theme(legend.position = "none")
 
-
+#sina plot
 ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, color = SSRI_status)) +
   geom_sina(alpha = 0.7, size = 2) +
   stat_summary(fun = median, geom = "crossbar", width = 0.3, color = "black") +  # show median line
@@ -1273,6 +1280,7 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_vag, color = SSRI_status)) +
   theme_minimal() +
   theme(legend.position = "none")
 
+#fluctuation of Vaginal Shannon over time
 ggplot(ssridf, aes(x = logDate, y = Shannon_vag, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
   geom_smooth(se = FALSE, method = "loess") +
@@ -1285,8 +1293,8 @@ ggplot(ssridf, aes(x = logDate, y = Shannon_vag, color = SSRI_status)) +
   theme_minimal()
 
 
-
 #gut
+#Shannon by SSRI boxplot
 ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, fill = SSRI_status)) +
   geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # hide default outliers
   geom_jitter(width = 0.15, size = 2, alpha = 0.7) +
@@ -1297,7 +1305,7 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, fill = SSRI_status)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none")
-
+#sina plot
 ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, color = SSRI_status)) +
   geom_sina(alpha = 0.7, size = 2) +
   stat_summary(fun = median, geom = "crossbar", width = 0.3, color = "black") +  # show median line
@@ -1308,7 +1316,7 @@ ggplot(ssridf, aes(x = SSRI_status, y = Shannon_gut, color = SSRI_status)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none")
-
+#Gut Shannon fluctuation over time by SSRI
 ggplot(ssridf, aes(x = logDate, y = Shannon_gut, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
   geom_smooth(se = FALSE, method = "loess") +
@@ -1387,30 +1395,29 @@ ggplot(ssridf_clean, aes(x = CST, y = Shannon_vag, fill = CST)) +
 
 
 
-
-
 #############################################################
 ssridf <- ssridf %>%
   arrange(biome_id, logDate)
 
-ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id, color = SSRI_status)) +
-  geom_smooth(se = FALSE, method = "loess") +
-  ylim(0,1) +
-  geom_point(size = 1.5, alpha = 0.7) +
-  facet_wrap(~ biome_id, scales = "free_x") +  # One panel per participant
-  scale_color_manual(values = c("Non-User" = "#1b9e77", "SSRI User" = "#d95f02")) +  # customize colors
-  labs(
-    title = "Candida albicans Vaginal Abundance Over Time",
-    x = "Date",
-    y = "Relative Abundance",
-    color = "SSRI Status"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(
-    strip.text = element_text(size = 7),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "bottom"
-  )
+#tried to put everyone onto a panel but too many plots
+# ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id, color = SSRI_status)) +
+#   geom_smooth(se = FALSE, method = "loess") +
+#   ylim(0,1) +
+#   geom_point(size = 1.5, alpha = 0.7) +
+#   facet_wrap(~ biome_id, scales = "free_x") +  # One panel per participant
+#   scale_color_manual(values = c("Non-User" = "#1b9e77", "SSRI User" = "#d95f02")) +  # customize colors
+#   labs(
+#     title = "Candida albicans Vaginal Abundance Over Time",
+#     x = "Date",
+#     y = "Relative Abundance",
+#     color = "SSRI Status"
+#   ) +
+#   theme_minimal(base_size = 12) +
+#   theme(
+#     strip.text = element_text(size = 7),
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     legend.position = "bottom"
+#   )
 
 #panel of vag CA for each participant
 example_ids <- unique(ssridf$biome_id)[51:76] #start from [1:24], then [25:50]
@@ -1438,8 +1445,6 @@ ssridf %>%
 
 #############################################################
 #joining DASS into ssridf
-library(lubridate)
-library(fuzzyjoin)
 
 cleanDass <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv")
 
@@ -1764,6 +1769,125 @@ ggplot(ssridf_with_mood, aes(x = stressseverity, y = calbican_rel_abundance_gut,
     plot.title = element_text(face = "bold")
   )
 ################################################################################
-#ssri and depression
+#ssri and gut most abundant species
+#stacked barplot of dominant species in gut
+
+plot_df <- ssridf_with_mood %>%
+  mutate(
+    species_group = case_when(
+      str_detect(dominant_species_fungal_gut, "Candida_albicans") ~ "Candida_albicans",
+      str_detect(dominant_species_fungal_gut, "globosa") ~ "globosa",
+      str_detect(dominant_species_fungal_gut, "restricta") ~ "restricta",
+      str_detect(dominant_species_fungal_gut, "Malassezia_globosa") ~ "Malassezia_globosa",
+      str_detect(dominant_species_fungal_gut, "Candida_parapsilosis") ~ "Candida_parapsilosis",
+      str_detect(dominant_species_fungal_gut, "Rhodotorula_mucilaginosa") ~ " Rhodotorula_mucilaginosa",
+      TRUE ~ "Other"
+    )
+  )
+
+species_freq <- plot_df %>%
+  group_by(SSRI_status, species_group) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(SSRI_status) %>%
+  mutate(percent = count / sum(count) * 100)
+
+ggplot(species_freq, aes(x = SSRI_status, y = percent, fill = species_group)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Distribution of Dominant Gut Microbiome Species by SSRI (samples)",
+    x = "SSRI status",
+    y = "Percentage of Samples",
+    fill = "Gut Species"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = c(
+      "Candida_albicans" = "#1f77b4",
+      "globosa" = "#ff7f0e",
+      "Malassezia_globosa" = "#ff7f0e",
+      "restricta" = "#d62728",
+      "Candida_parapsilosis" = "#9467bd",
+      "Rhodotorula_mucilaginosa" = "#8c564b",
+      "Other" = "gray80"
+    )
+  )
+
+
+#########################################################################
+#PCA of Vag CA by SSRI status
+sample_df <- data.frame(sample_data(fungal2.0))
+# Create the new column
+sample_df$SSRI_status <- ifelse(sample_df$biome_id %in% ssri_users, "SSRI", "non-SSRI")
+# Assign it back to fungal2.0
+sample_data(fungal2.0) <- sample_data(sample_df)
+#all samples
+ord_plot(fungal2.0 %>% 
+           tax_transform("clr") %>%
+           ord_calc("PCA"), 
+         color = "SSRI_status", size = 2) +
+  theme_minimal()
+#vaginal samples
+fungal_vaginal <- subset_samples(fungal2.0, sampleType == "vaginal")
+fungal_vaginal <- fungal_vaginal %>% tax_transform("clr")
+fungal_vaginal <- fungal_vaginal %>% ord_calc(method = "PCA")
+ord_plot(fungal_vaginal, color = "SSRI_status", size = 2) +
+  theme_minimal()
+#gut samples
+fungal_gut <- subset_samples(fungal2.0, sampleType == "fecal")
+fungal_gut <- fungal_gut %>% tax_transform("clr")
+fungal_gut <- fungal_gut %>% ord_calc(method = "PCA")
+ord_plot(fungal_gut, color = "SSRI_status", size = 2) +
+  theme_minimal()
+
+#######################################################################
+#general exploration of difference between gut and vaginal fungus
+ord_plot(fungal2.0 %>% 
+           tax_transform("clr") %>%
+           ord_calc("PCA"), 
+         color = "sampleType", size = 2) +
+  theme_minimal()
+#############################################################
+#everyone's fluctuation over time
+ssri_ids <- unique(ssridf$biome_id[ssridf$SSRI_status == "SSRI User"])
+nonssri_ids <- unique(ssridf$biome_id[ssridf$SSRI_status == "Non-User"])
+
+# Generate distinct colors for each group using base R colorRampPalette
+warm_palette <- colorRampPalette(c("#E69F00", "#F0E442")) # oranges/yellows
+cold_palette <- colorRampPalette(c("#56B4E9", "#0072B2")) # blues
+
+warm_colors <- warm_palette(length(nonssri_ids))
+cold_colors <- cold_palette(length(ssri_ids))
+
+# Map colors to biome_ids
+biome_colors <- c(setNames(cold_colors, ssri_ids), setNames(warm_colors, nonssri_ids))
+
+# Add color column to dataframe by matching biome_id
+ssridf <- ssridf %>%
+  mutate(color = biome_colors[as.character(biome_id)])
+
+ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id)) +
+  geom_smooth(aes(color = color), method = "loess", se = FALSE) +
+  geom_point(aes(color = color), alpha = 0.6, size = 2) +
+  scale_color_identity() +
+  scale_y_continuous(limits = c(0, 1)) +  # set y-axis from 0 to 1
+  theme_minimal() +
+  labs(
+    title = "Vaginal C.albicans Abundance Over Time by Biome ID and SSRI Status",
+    x = "Log Date",
+    y = "C. albicans Abundance (vaginal)"
+  )
+
+ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, group = biome_id)) +
+  geom_smooth(aes(color = color), method = "loess", se = FALSE) +
+  geom_point(aes(color = color), alpha = 0.6, size = 2) +
+  scale_color_identity() +
+  scale_y_continuous(limits = c(0, 1)) +  # set y-axis from 0 to 1
+  theme_minimal() +
+  labs(
+    title = "Gut C.albicans Abundance Over Time by Biome ID and SSRI Status",
+    x = "Log Date",
+    y = "C. albicans Abundance (gut)"
+  )
+
 
 
