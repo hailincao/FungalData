@@ -22,6 +22,7 @@ library(lubridate)
 library(fuzzyjoin)
 #remotes::install_github("david-barnett/microViz")
 library(microViz)
+library(colorspace)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -1866,8 +1867,8 @@ ssridf <- ssridf %>%
   mutate(color = biome_colors[as.character(biome_id)])
 
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id)) +
-  geom_smooth(aes(color = color), method = "loess", se = FALSE) +
-  geom_point(aes(color = color), alpha = 0.6, size = 2) +
+  geom_smooth(aes(color = color), method = "loess", se = FALSE, alpha = 0.1, size = 0.5) +
+  geom_point(aes(color = color), alpha = 0.9, size = 2) +
   scale_color_identity() +
   scale_y_continuous(limits = c(0, 1)) +  # set y-axis from 0 to 1
   theme_minimal() +
@@ -1878,16 +1879,22 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, group = biome_id
   )
 
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, group = biome_id)) +
-  geom_smooth(aes(color = color), method = "loess", se = FALSE) +
-  geom_point(aes(color = color), alpha = 0.6, size = 2) +
+  #geom_smooth(aes(color = color), method = "loess", se = FALSE, alpha = 0.1, size = 0.5) +
+  geom_point(aes(color = color), alpha = 0.9, size = 2) +  # semi-transparent points
   scale_color_identity() +
-  scale_y_continuous(limits = c(0, 1)) +  # set y-axis from 0 to 1
+  scale_y_continuous(limits = c(0, 1)) +
   theme_minimal() +
   labs(
-    title = "Gut C.albicans Abundance Over Time by Biome ID and SSRI Status",
+    title = "Gut C. albicans Abundance Over Time by Biome ID and SSRI Status",
     x = "Log Date",
     y = "C. albicans Abundance (gut)"
   )
+
+
+
+
+
+
 
 
 
