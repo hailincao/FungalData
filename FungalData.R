@@ -22,7 +22,6 @@ library(lubridate)
 library(fuzzyjoin)
 #remotes::install_github("david-barnett/microViz")
 library(microViz)
-library(colorspace)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
 
@@ -786,6 +785,7 @@ sample_data(fungal2.0) <- merged_df %>%
   sample_data()
 
 
+
 #######################################################################
 #merging merging merging vaginal data
 
@@ -912,6 +912,31 @@ ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_vag, color = CST)) +
     y = "C.Albicans Relative Abundance"
   ) +
   theme_minimal()
+
+
+########
+#gut
+ggplot(CST_df, aes(x = CST, y = calbican_rel_abundance_gut, fill = CST)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.5, color = "black", size = 1) +
+  labs(
+    title = "Distribution of Gut C.albican Relative Abundance by Vaginal Microbiome CST per sample",
+    x = "Vaginal CST",
+    y = " Gut C.albicans Relative Abundance"
+  ) +
+  theme_minimal()
+
+ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_gut, color = CST)) +
+  geom_point(alpha = 0.6, size = 1.8) +
+  geom_smooth(method = "loess", se = FALSE, size = 1) +
+  scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Gut Candida albicans Abundance by CST",
+    x = "Date",
+    y = "Gut C.Albicans Relative Abundance"
+  ) +
+  theme_minimal()
+
 
 
 #check who have CSTV
@@ -1393,6 +1418,21 @@ ggplot(ssridf_clean, aes(x = CST, y = Shannon_vag, fill = CST)) +
     axis.text.x = element_text(angle = 30, hjust = 1)
   )
 
+ggplot(ssridf_clean, aes(x = CST, y = Shannon_gut, fill = CST)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # Hide default outliers
+  geom_jitter(width = 0.2, size = 2, alpha = 0.7, color = "black") +  # Overlay individual points
+  scale_fill_brewer(palette = "Set3") +  # Or choose another palette
+  labs(
+    title = "Shannon Diversity in Gut Mycobiome by CST",
+    x = "CST",
+    y = "Shannon Diversity Index"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
 
 
 
@@ -1815,12 +1855,16 @@ ggplot(species_freq, aes(x = SSRI_status, y = percent, fill = species_group)) +
 
 
 #########################################################################
+#PCA
 #PCA of Vag CA by SSRI status
 sample_df <- data.frame(sample_data(fungal2.0))
 # Create the new column
 sample_df$SSRI_status <- ifelse(sample_df$biome_id %in% ssri_users, "SSRI", "non-SSRI")
 # Assign it back to fungal2.0
 sample_data(fungal2.0) <- sample_data(sample_df)
+
+
+
 #all samples
 ord_plot(fungal2.0 %>% 
            tax_transform("clr") %>%
@@ -1838,7 +1882,9 @@ fungal_gut <- subset_samples(fungal2.0, sampleType == "fecal")
 fungal_gut <- fungal_gut %>% tax_transform("clr")
 fungal_gut <- fungal_gut %>% ord_calc(method = "PCA")
 ord_plot(fungal_gut, color = "SSRI_status", size = 2) +
+  stat_ellipse(aes(color = SSRI_status), type = "norm", size = 0.6, linetype = "dashed")+
   theme_minimal()
+
 
 #######################################################################
 #general exploration of difference between gut and vaginal fungus
@@ -1889,6 +1935,702 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_gut, group = biome_id
     x = "Log Date",
     y = "C. albicans Abundance (gut)"
   )
+
+#################################################################################
+#CA and L.iners
+Liners_CA_vag <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_vag, Liners_rel_abundance_vag) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_vag, Liners_rel_abundance_vag),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_vag = "C. albicans",
+                     Liners_rel_abundance_vag = "L. iners")
+  )
+
+ggplot(Liners_CA_vag, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. iners" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Vaginal C. albicans and L. iners Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+Liners_CA_gut <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_gut, Liners_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_gut, Liners_rel_abundance_gut),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_gut = "C. albicans",
+                     Liners_rel_abundance_gut = "L. iners")
+  )
+
+ggplot(Liners_CA_gut, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. iners" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Gut C. albicans and L. iners Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+lgasseri_CA_vag <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_vag, lgasseri_rel_abundance_vag) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_vag, lgasseri_rel_abundance_vag),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_vag = "C. albicans",
+                     lgasseri_rel_abundance_vag = "L. gasseri")
+  )
+
+ggplot(lgasseri_CA_vag, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. gasseri" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Vaginal C. albicans and L. gasseri Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+lgasseri_CA_gut <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_gut, lgasseri_rel_abundance_gut) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_gut, lgasseri_rel_abundance_gut),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_gut = "C. albicans",
+                     lgasseri_rel_abundance_gut = "L. gasseri")
+  )
+
+ggplot(lgasseri_CA_gut, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. gasseri" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Gut C. albicans and L. gasseri Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+
+lcrispatus_CA_vag <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_vag, lcrispatus_rel_abundance_vag) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_vag, lcrispatus_rel_abundance_vag),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_vag = "C. albicans",
+                     lcrispatus_rel_abundance_vag = "L. crispatus")
+  )
+
+ggplot(lcrispatus_CA_vag, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. crispatus" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Vaginal C. albicans and L. crispatus Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+ljensenii_CA_vag <- ssridf %>%
+  select(logDate, SSRI_status, calbican_rel_abundance_vag, ljensenii_rel_abundance_vag) %>%
+  pivot_longer(
+    cols = c(calbican_rel_abundance_vag, ljensenii_rel_abundance_vag),
+    names_to = "Species",
+    values_to = "Abundance"
+  ) %>%
+  mutate(
+    Species = recode(Species,
+                     calbican_rel_abundance_vag = "C. albicans",
+                     ljensenii_rel_abundance_vag = "L. jensenii")
+  )
+
+
+ggplot(ljensenii_CA_vag, aes(x = logDate, y = Abundance, color = Species, linetype = SSRI_status)) +
+  geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+  geom_point(alpha = 0.4, size = 1.0) + 
+  scale_color_manual(values = c("C. albicans" = "purple", "L. crispatus" = "darkgreen")) +
+  scale_linetype_manual(values = c("SSRI User" = "solid", "Non-User" = "dashed")) +
+  labs(
+    x = "Date",
+    y = "Relative Abundance",
+    color = "Species",
+    linetype = "SSRI Status",
+    title = "Vaginal C. albicans and L.jensenii Abundance Over Time by SSRI Status"
+  ) +
+  theme_minimal()
+
+#####################################################################################
+#Menses and SSRI and CA and Depression
+menses_df <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/imputed_menstruation_data_3_11.csv")
+menses_df <- menses_df %>% 
+  rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
+  rename_with(~gsub("\\.", "-", .))
+
+menses_df_long <- menses_df %>% 
+  pivot_longer(cols=starts_with("2022-"), names_to="logDate", values_to="menses_status")
+
+menses_df_long$logDate <- as.Date(menses_df_long$logDate)
+menses_df_long$biome_id <- as.character(menses_df_long$biome_id)
+
+ssridf_mood_menses <- ssridf_with_mood %>% 
+  left_join(menses_df_long, by=c("biome_id", "logDate"))
+
+base_names <- gsub("\\.x$|\\.y$", "", colnames(ssridf_mood_menses))
+duplicated_names <- base_names[duplicated(base_names)]
+duplicated_names
+
+colnames(ssridf_mood_menses)[endsWith(colnames(ssridf_mood_menses), ".y")]
+ssridf_mood_menses <- ssridf_mood_menses %>%
+  select(-ends_with(".y"))
+names(ssridf_mood_menses) <- gsub("\\.x$", "", names(ssridf_mood_menses))
+
+ssridf_mood_menses <- ssridf_mood_menses %>% 
+  mutate(menses_day = ifelse(menses_status %in% c(1,2,3,7,9,78), "menses", 
+                             ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA)))
+
+
+#boxplot
+boxplot_menses_df <- ssridf_mood_menses %>%
+  filter(!is.na(menses_day)) %>%  # Remove NA menses upfront
+  mutate(
+    menses_label = case_when(
+      menses_day == "menses" ~ "On Menses",
+      menses_day == "not_menses" ~ "Not on Menses"
+    ),
+    group = paste(SSRI_status, menses_label, sep = " - ")
+  )
+
+
+ggplot(boxplot_menses_df, aes(x = depressionseverity, y = calbican_rel_abundance_vag, fill = group)) +
+  geom_boxplot(position = position_dodge(width = 0.8), outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group), 
+              position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Depression Severity",
+    y = "Vaginal C. albicans Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+#violin
+ggplot(boxplot_menses_df, aes(x = depressionseverity, y = calbican_rel_abundance_vag, fill = group)) +
+  geom_violin(position = position_dodge(width = 0.8), trim = FALSE, alpha = 0.7) +
+  geom_jitter(aes(color = group),
+              position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Depression Severity",
+    y = "Vaginal C. albicans Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+#################gut
+
+ggplot(boxplot_menses_df, aes(x = depressionseverity, y = calbican_rel_abundance_gut, fill = group)) +
+  geom_boxplot(position = position_dodge(width = 0.8), outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group), 
+              position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Depression Severity",
+    y = "Gut C. albicans Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+
+
+#with only SSRI and menses
+ggplot(boxplot_menses_df, aes(x = group, y = calbican_rel_abundance_vag, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Vaginal C. albicans Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+
+#gut
+ggplot(boxplot_menses_df, aes(x = group, y = calbican_rel_abundance_gut, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Gut C. albicans Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+################################
+#vaginal and gut lactobacillus
+ggplot(boxplot_menses_df, aes(x = group, y = lacto_rel_abundance_vag, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Vaginal Lactobacillus Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+
+ggplot(boxplot_menses_df, aes(x = depressionseverity, y = lacto_rel_abundance_vag, fill = group)) +
+  geom_boxplot(position = position_dodge(width = 0.8), outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group), 
+              position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Depression Severity",
+    y = "Vaginal Lactobaciilus Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggplot(boxplot_menses_df, aes(x = group, y = lacto_rel_abundance_vag, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Vaginal Lactobacillus Relative Abundance",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+ggplot(boxplot_menses_df, aes(x = group, y = Shannon_vag, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Vaginal Fungal Shannon Diversity",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+ggplot(boxplot_menses_df, aes(x = group, y = Shannon_gut, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.7, alpha = 0.5) +
+  geom_jitter(aes(color = group),
+              position = position_jitter(width = 0.2),
+              size = 1.5, alpha = 0.6) +
+  labs(
+    x = "Group",
+    y = "Gut Fungal Shannon Diversity",
+    fill = "Group",
+    color = "Group"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+#Linear Mixed Effect Model
+vagCA_SSRI_Menses <- lmer(calbican_rel_abundance_vag ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagCA_SSRI_Menses)
+
+gutCA_SSRI_Menses <- lmer(calbican_rel_abundance_gut ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
+summary(gutCA_SSRI_Menses)
+
+vagLacto_SSRI_Menses <- lmer(lacto_rel_abundance_vag ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagLacto_SSRI_Menses)
+
+
+#with depression
+vagCA_SSRI_Menses_d <- lmer(calbican_rel_abundance_vag ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagCA_SSRI_Menses_d)
+
+gutCA_SSRI_Menses_d <- lmer(calbican_rel_abundance_gut ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
+summary(gutCA_SSRI_Menses_d)
+
+vagLacto_SSRI_Menses_d <- lmer(lacto_rel_abundance_vag ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagLacto_SSRI_Menses_d)
+
+
+##################################################################################
+#looking at depression, menses, and SSRI in a continuous way
+lineplot_df <- ssridf_mood_menses %>%
+  filter(!is.na(menses_day), !is.na(depression_score)) %>%  # remove NAs
+  mutate(
+    menses_label = case_when(
+      menses_day == "menses" ~ "On Menses",
+      menses_day == "not_menses" ~ "Not on Menses"
+    ),
+    group = paste(SSRI_status, menses_label, sep = " - ")
+  )
+
+ggplot(lineplot_df, aes(x = depression_score, y = calbican_rel_abundance_vag, color = group)) +
+  geom_point(alpha = 0.5, size = 1.8) +  # Dots
+  geom_smooth(method = "loess", se = FALSE, size = 0.8) +  # Smooth solid lines
+  labs(
+    x = "Depression Score",
+    y = "C. albicans Relative Abundance (Vaginal)",
+    color = "Group"
+  ) +
+  theme_minimal()
+
+ggplot(lineplot_df, aes(x = depression_score, y = calbican_rel_abundance_gut, color = group)) +
+  geom_point(alpha = 0.5, size = 1.8) +  # Dots
+  geom_smooth(method = "loess", se = FALSE, size = 0.8) +  # Smooth solid lines
+  labs(
+    x = "Depression Score",
+    y = "C. albicans Relative Abundance (Gut)",
+    color = "Group"
+  ) +
+  theme_minimal()
+
+ggplot(lineplot_df, aes(x = depression_score, y = lacto_rel_abundance_vag, color = group)) +
+  geom_point(alpha = 0.5, size = 1.8) +  # Dots
+  geom_smooth(method = "loess", se = FALSE, size = 0.8) +  # Smooth solid lines
+  labs(
+    x = "Depression Score",
+    y = "Lactobacillus Relative Abundance (Vaginal)",
+    color = "Group"
+  ) +
+  theme_minimal()
+
+
+
+
+#################################################################################
+#PCA by lots of categorical variable
+forPCAmerge <- sample_data(fungal2.0) %>%
+  data.frame() %>%
+  rownames_to_column(var = "SampleID")
+
+columns_to_join <- c("biome_id", "logDate", "menses_day", "CST", "ethnicity", "sexuality",
+                     "activity_level", "birthControl", "field_hockey",
+                     "depressionseverity", "anxietyseverity", "stressseverity")
+
+ssri_subset <- ssridf_mood_menses %>%
+  select(all_of(columns_to_join))
+
+forPCAmerge$biome_id <- as.character(sample_df$biome_id)
+
+joined_df <- forPCAmerge %>%
+  left_join(ssri_subset, by = c("biome_id", "logDate"))
+
+new_sample_data <- joined_df %>%
+  column_to_rownames(var = "SampleID") %>%
+  sample_data()
+
+
+
+############
+#creating study phase column
+# Ensure logDate is in Date format
+new_sample_data_df <- data.frame(new_sample_data)
+new_sample_data_df$logDate <- as.Date(new_sample_data_df$logDate)
+
+# Remove NAs in logDate before breaking into phases
+valid_dates <- new_sample_data_df %>%
+  filter(!is.na(logDate))
+
+numeric_dates <- as.numeric(valid_dates$logDate)
+
+quantile_cutoffs <- quantile(numeric_dates, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE)
+
+date_cutoffs <- as.Date(quantile_cutoffs, origin = "1970-01-01")
+
+new_sample_data_df$study_phase <- cut(
+  as.Date(new_sample_data_df$logDate),
+  breaks = date_cutoffs,
+  labels = c("Phase 1", "Phase 2", "Phase 3"),
+  include.lowest = TRUE
+)
+
+updated_sample_data <- sample_data(new_sample_data_df)
+
+# Replace the sample_data in the phyloseq object
+phyleqforPCA <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  updated_sample_data
+)
+##############
+#separating vaginal phyloseq
+vaginal_phy <- subset_samples(phyleqforPCA, sampleType == "vaginal")
+
+vaginal_phy <- vaginal_phy %>% tax_transform("clr")
+vaginal_phy <- vaginal_phy %>% ord_calc(method = "PCA")
+ord_plot(vaginal_phy, color = "menses_day", size = 2) +
+  stat_ellipse(aes(color = menses_day), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "CST", size = 2) +
+  stat_ellipse(aes(color = CST), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "activity_level", size = 2) +
+  #stat_ellipse(aes(color = activity_level), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "birthControl", size = 2) +
+  stat_ellipse(aes(color = birthControl), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "field_hockey", size = 2) +
+  stat_ellipse(aes(color = field_hockey), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "stressseverity", size = 2) +
+  stat_ellipse(aes(color = stressseverity), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "study_phase", size = 2) +
+  stat_ellipse(aes(color = study_phase), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "ethnicity", size = 2) +
+  stat_ellipse(aes(color = ethnicity), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+ord_plot(vaginal_phy, color = "menses_day", size = 2) +
+  stat_ellipse(aes(color = menses_day), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+
+# ord_plot(vaginal_phy, color = "biome_id", size = 2) +
+#   #stat_ellipse(aes(color = biome_id), type = "norm", size = 0.6, linetype = "dashed") +
+#   theme_minimal()
+
+#none of the results are significant.....
+
+############################################################################3
+#case study of SSRI user and menstruation and CA abundance
+menses_11 <- ssridf_mood_menses %>%
+  filter(biome_id == 11)
+
+ggplot(menses_11, aes(x = logDate, y = calbican_rel_abundance_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "C. albicans Abundance (Vaginal)",
+    title = "C. albicans Abundance Over Time (biome_id = 11, SSRI user)"
+  ) +
+  theme_minimal()
+
+ggplot(menses_11, aes(x = logDate, y = Shannon_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "Shannon Diversity (Vaginal)",
+    title = "Shannon Diversity Over Time (biome_id = 11, SSRI user)"
+  ) +
+  theme_minimal()
+
+menses_33 <- ssridf_mood_menses %>%
+  filter(biome_id == 33)
+ggplot(menses_33, aes(x = logDate, y = calbican_rel_abundance_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "C. albicans Abundance (Vaginal)",
+    title = "C. albicans Abundance Over Time (biome_id = 33, SSRI user)"
+  ) +
+  theme_minimal()
+
+ggplot(menses_33, aes(x = logDate, y = Shannon_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "Shannon Diversity (Vaginal)",
+    title = "Shannon Diversity Over Time (biome_id = 33, SSRI user)"
+  ) +
+  theme_minimal()
+
+menses_60 <- ssridf_mood_menses %>%
+  filter(biome_id == 60)
+ggplot(menses_60, aes(x = logDate, y = calbican_rel_abundance_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "C. albicans Abundance (Vaginal)",
+    title = "C. albicans Abundance Over Time (biome_id = 60, SSRI user)"
+  ) +
+  theme_minimal()
+
+ggplot(menses_60, aes(x = logDate, y = Shannon_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "Shannon Diversity (Vaginal)",
+    title = "Shannon Diversity Over Time (biome_id = 60, SSRI user)"
+  ) +
+  theme_minimal()
+##############################
+#non-user
+menses_1 <- ssridf_mood_menses %>%
+  filter(biome_id == 1)
+
+ggplot(menses_1, aes(x = logDate, y = calbican_rel_abundance_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "C. albicans Abundance (Vaginal)",
+    title = "C. albicans Abundance Over Time (biome_id = 1, Non-User)"
+  ) +
+  theme_minimal()
+ggplot(menses_1, aes(x = logDate, y = Shannon_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "Shannon Diversity (Vaginal)",
+    title = "Shannon Diversity Over Time (biome_id = 1, Non-User)"
+  ) +
+  theme_minimal()
+
+
+menses_61 <- ssridf_mood_menses %>%
+  filter(biome_id == 61)
+
+ggplot(menses_61, aes(x = logDate, y = calbican_rel_abundance_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "C. albicans Abundance (Vaginal)",
+    title = "C. albicans Abundance Over Time (biome_id = 61, Non-User)"
+  ) +
+  theme_minimal()
+ggplot(menses_61, aes(x = logDate, y = Shannon_vag)) +
+  geom_point(aes(shape = menses_day, color = menses_day), size = 3) +
+  scale_shape_manual(values = c("menses" = 17, "not_menses" = 16)) +  # 17 = triangle, 16 = circle
+  scale_color_manual(values = c("menses" = "red", "not_menses" = "black")) +
+  labs(
+    x = "Date",
+    y = "Shannon Diversity (Vaginal)",
+    title = "Shannon Diversity Over Time (biome_id = 61, Non-User)"
+  ) +
+  theme_minimal()
+
+#################################################################
+#average stress, depression, and CA abundance for gut and vagina
+avgDASS_CA_vag <- ssridf_mood_menses %>%
+  group_by(biome_id, SSRI_status) %>%
+  summarise(
+    avg_stress = mean(stress_score, na.rm = TRUE),
+    avg_calbicans = mean(calbican_rel_abundance_vag, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+ggplot(avgDASS_CA_vag, aes(x = avg_stress, y = avg_calbicans, color = SSRI_status)) +
+  geom_point(size = 2, alpha = 0.7) +
+  #geom_abline(intercept = 0, slope = 1)
+  abline(coef = c(0,1)) +
+  labs(
+    x = "Average Stress Score for Each Participant Throughout Study",
+    y = "Average Vaginal C. albicans Abundance Throughout Study",
+    title = "Average Stress vs. Vaginal C. albicans Abundance by SSRI Use for Each Participant"
+  ) +
+  scale_color_manual(values = c("SSRI User" = "cyan3", "Non-User" = "coral1")) +
+  theme_minimal()
+
+avgDASS_CA_gut <- ssridf_mood_menses %>%
+  group_by(biome_id, SSRI_status) %>%
+  summarise(
+    avg_depression = mean(depression_score, na.rm = TRUE),
+    avg_calbicans = mean(calbican_rel_abundance_gut, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(avgDASS_CA_gut, aes(x = avg_depression, y = avg_calbicans, color = SSRI_status)) +
+  geom_point(size = 2, alpha = 0.7) +
+  #geom_abline(intercept = 0, slope = 1)
+  abline(coef = c(0,1)) +
+  labs(
+    x = "Average Depression Score for Each Participant Throughout Study",
+    y = "Average Gut C. albicans Abundance Throughout Study",
+    title = "Average Depression vs. C. albicans Abundance by SSRI Use for Each Participant"
+  ) +
+  scale_color_manual(values = c("SSRI User" = "cyan3", "Non-User" = "coral1")) +
+  theme_minimal()
 
 
 
