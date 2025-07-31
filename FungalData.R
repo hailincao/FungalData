@@ -24,49 +24,35 @@ library(fuzzyjoin)
 library(microViz)
 
 data <- readRDS("/Users/caoyang/Desktop/Tetel Lab/Walther-Antonio_Project_022_ITS2.rds") #the data is reading an email forwarded by Alice to Helena 
-
+############################################################################################################
+#exploration on fungal data
 taxaF <- tax_table(data)
 otuF <- otu_table(data)
 
 #rows in both datasets are genetic sequences, the otu dataset says 1/0 whether it has that genetic sequence
 #rownames in taxa table : specific sequences; whether a sample have this sequence: indicated by 0/1
 
-length(table(taxaF@.Data[,"Species"]))
 #so each row is not species, since the number of species is much shorter than #rows, maybe it's substring?
 #there should be somewhere that associate the id numbers in otu with the specific participant 
-
 taxa_matrix <- taxaF@.Data
-taxa_matrix[1,]
 rownames <- rownames(taxaF@.Data)
-rownames
 colnames <- colnames(taxaF@.Data)
-colnames
 taxa_matrix[, "SH"]
 sequence <- taxaF@.Data[, "sequence"]
-# sequence[1]
-# sequence[2]
-# sequence[5]
 
 species <- taxaF@.Data[, "Species"]
-dim(taxaF)
-# species[1]
-# species[2]
-# species[3]
-# species[4]
-# species[5]
 
 table(taxaF@.Data[, "Species"])
 names(which.max(table(taxaF@.Data[, "Species"])))
-
 
 species <- taxaF@.Data[, "Species"]
 nonemptyspecies <- species[species != ""]# Remove empty strings
 emptystrings <- species[species == ""]
 length(emptystrings) #8560/15293 are empty
 most_frequent_species <- names(which.max(table(nonemptyspecies)))
-most_frequent_species
 
-
+############################################################################################################
+#BLAST check
 #spot check random rows
 set.seed(123)
 randomrows <- sample(1:nrow(taxaF@.Data), 25)
@@ -96,8 +82,7 @@ sequence_f9d7bb29bdd41360e3a98318a78a9a9a
 
 
 length(table(rownames)) #are there repeating rownames? no
-
-
+############################################################################################################
 #trying Alice's code #checking contamination
 ntaxa(data)
 nsamples(data)
@@ -152,33 +137,11 @@ dim(otu_table(fungal_physeq_subset))
 dim(otu_table(fungal_physeq_no_contam))
 otu_table(fungal_physeq_subset)[1,]
 
-class(fungal_physeq_subset)
 
-#3.26
 dominant_spec <- apply(t(otu_table(fungal_physeq_subset)), 2, function(x) {
   spec <- tax_table(fungal_physeq_subset)[which.max(x), "Species"]
   # ifelse(is.na(spec), "Unknown", spec)
 })
-
-head(dominant_spec)
-
-
-# cat("OTU table dimensions:", dim(otu_table(fungal_physeq_no_contam)), "\n")
-# cat("Tax table dimensions:", dim(tax_table(fungal_physeq_no_contam)), "\n")
-# 
-# 
-# 
-# otu_corrected <- otu_table(t(otu_table(fungal_physeq_no_contam)), taxa_are_rows = TRUE)
-# corrected_physeq <- phyloseq(
-#   otu_corrected,
-#   tax_table(fungal_physeq_no_contam),
-#   sample_data(fungal_physeq_no_contam) # If you have sample data
-# )
-# 
-# dominant_spec <- apply(otu_table(fungal_physeq_no_contam), 1, function(x) {
-#   spec <- tax_table(fungal_physeq_no_contam)[which.max(x), "Species"]
-#   ifelse(is.na(spec), "Unknown", spec)
-# })
 
 #creating dominant species column
 sample_data(fungal_physeq_subset)$DominantSpecies <- dominant_spec
@@ -187,11 +150,8 @@ sample_data(fungal_physeq_subset)$DominantSpecies
 #check the class of the object we created
 summary(fungal_physeq_subset)
 #the sample data part of our object
-#View(sample_data(fungal_physeq_subset))
-#sort the most frequently appeared species in the sample data
 sort(table(sample_data(fungal_physeq_subset)$DominantSpecies))  # Candida_albicans  the most frequently appeared
 
-#4.2
 #turning the otu table back to data frame
 physeqOTU<- as.data.frame(otu_table(fungal_physeq_subset))
 physeqOTU["F1376",1:10] #the first ten rows of this sample column
@@ -205,16 +165,17 @@ sequenceIDnonzero <- colnames(physeqOTU)[nonzero]
 #"f74f09973e588cd61df7e11c6620c2fd" "8d50d5e4d31b744eb9647746878c017e"
 taxaF@.Data["074f81db997e702d17c85be0c46b03ad", "Species"] #it's Candida_albicans
 
-#4.3
+###################################################################
+#creating sample data
 sampleLabel<-read_excel("/Users/caoyang/Desktop/Tetel Lab/cleaned_samplesv2.xlsx")
 sampleLabel$sampleID <- sampleLabel$qr
 sampleLabel <- sampleLabel[, c("sampleID", "biome_id", "sampleType", "logDate")]
 
 temp <- t(otu_table(fungal_physeq_subset))
-temp[1:10, 1:10]
+#temp[1:10, 1:10]
 temp2<-temp[, "F1376"]
-head(temp2)
-table(temp2)
+#head(temp2)
+#table(temp2)
 
 which.max(temp2)
 temp2[2024]
@@ -222,7 +183,7 @@ rownames(temp2[1:10])
 rownames(temp2[temp2>0])
 taxaF@.Data["f8f00151e8dd21d0f490343afb43d854", "Species"] 
 
-
+###################################################################
 #merging sample label and sample data
 #removing the ones that are blank
 fungal_physeq_subset <- subset_samples(
@@ -236,13 +197,14 @@ sampleDataforMerge <- data.frame(temp$SampleID, temp$is_blank, temp$DominantSpec
 colnames(sampleDataforMerge) <- (c("SampleID", "is_blank", "DominantSpecies"))
 
 #merging with or without all rows
-labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE)
-cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE)
+labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=TRUE) #this is the one that did not omit anything from Alice or my data
+cl_labeled_sample <- merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all=FALSE) #this one only kept the ones that were matched in both Alice's and my data
 
 #the ones with my extra rows but not the extra rows in Alice's
 sampleClean<-merge(sampleDataforMerge, sampleLabel, by.x= "SampleID", by.y="sampleID", all.x=TRUE, all.y=FALSE)
 dim(sampleClean)
 
+#exporting out the sample data
 write.csv(cl_labeled_sample,"Cleaned Fungal Data")
 write_xlsx(cl_labeled_sample, "Cleaned Fungal Data Sheet")
 
@@ -252,7 +214,6 @@ table(is.na(labeled_sample$is_blank), is.na(labeled_sample$sampleType)) #1766 we
 table(is.na(labeled_sample$sampleType))
 
 
-#April 17
 #checking to see the sample names for the 105 and 1249 ones
 subset1 <- labeled_sample[!is.na(labeled_sample$is_blank) & is.na(labeled_sample$sampleType), ]
 dim(subset1)
@@ -266,6 +227,7 @@ head(rownames(sampleLabel))
 head(sampleLabel$sampleID)  
 rownames(sampleLabel) <- sampleLabel$sampleID 
 
+#a sample data that I did not end up using -- cuz it only contained the ones in Alice's sheet?
 clean_labeled_sample<-labeled_sample[, c("SampleID", "is_blank", "DominantSpecies", "sampleType")] #removing the collumns that I don't want
 head(sample_data(fungal_physeq_subset))
 head(clean_labeled_sample)
@@ -275,7 +237,7 @@ head(rownames(clean_labeled_sample))
 nrow(clean_labeled_sample)
 dim(sample_data(fungal_physeq_subset))
 
-
+###############################################################################################
 #randomly picking 5 fungus and BLAST
 set.seed(345)
 randomrowsFungus <- sample(1:nrow(tax_table(fungal_physeq_subset)), 5)
@@ -284,6 +246,7 @@ randomTaxaFungus[, c("sequence", "Species")]
 
 ###############################################################################################
 #creating a new phyloseq object with updated sample table
+#I ended up with the sample data that were matched in both Alice's and my data
 fungal2.0 <- fungal_physeq_subset
 rownames(cl_labeled_sample) <- cl_labeled_sample$SampleID
 sample_data(fungal2.0) <- cl_labeled_sample
@@ -293,13 +256,14 @@ fungalTaxa <- tax_table(fungal2.0)
 fungalOTU <- otu_table(fungal2.0)
 fungalSample <- as.data.frame(as.matrix(sample_data(fungal2.0)))
 
+###############################################################################################
 #filtering for just vaginal 
 vaginal_sample_data_phyloseq <- fungalSample %>% 
   filter(sampleType=="vaginal")
 vaginal_fungal_otu <- fungalOTU[rownames(vaginal_sample_data_phyloseq), , drop = FALSE]
 vaginal_fungal_taxa <- fungalTaxa[colnames(vaginal_fungal_otu), , drop = FALSE]
 
-####################vaginal phyloseq obj
+#vaginal phyloseq obj
 vaginal_phyloseq <- phyloseq(otu_table(vaginal_fungal_otu, taxa_are_rows=FALSE), 
                              sample_data(vaginal_sample_data_phyloseq), tax_table(vaginal_fungal_taxa))
 
@@ -318,17 +282,9 @@ alpha_div <- estimate_richness(fungal_physeq_subset, measures = c("Shannon"))
 
 summary(alpha_div[[1]]) #alpha_div is a list and we want the first element in the list
 
-
-plot_richness(fungal_physeq_subset, x = "SampleID", measures = c("Shannon")) + theme_minimal()
-
-plot_richness(fungal_physeq_subset, x = "SampleID", color = "DominantSpecies", measures = c("Shannon")) +
-  theme_minimal() +
-  ggtitle("Alpha Diversity Colored by Dominant Species")
-#this looks chaotic
-
 ###############################################################################################
 #creating the sampledata as a data frame
-fungalSample <- sampleClean
+fungalSample <- sampleClean #the sample data that has mine but not Alice's ID
 fungalSample$Shannon <- alpha_div[[1]]
 colnames(fungalSample)
 summary(fungalSample)
@@ -445,11 +401,6 @@ print(unique(missing_list$biome_id))
 
 dim(dass_data)
 
-### Save final data output
-# write.csv(dass_data,
-#           file = "/Users/caoyang/Desktop/Tetel Lab/datasets/cleaned_dass.csv",
-#           row.names = FALSE)
-
 # ------------------------------------------------------------------------------
 # calculate depression, anxiety, and stress scores 
 # ------------------------------------------------------------------------------
@@ -471,7 +422,6 @@ summary(dass$Timestamp)
 dass$Timestamp_numeric <- as.numeric(dass$Timestamp)
 table(dass$Timestamp)
 dass <- dass[dass$Timestamp_numeric <= 19342, ] 
-View(dass)
 ?as.Date
 
 dass$week <- rep(NA, nrow(dass))
@@ -564,6 +514,7 @@ dass$stressseverity[dass$stress_score>=19 & dass$stress_score<=25] <- 2
 dass$stressseverity[dass$stress_score>=26 & dass$stress_score<=33] <- 3
 dass$stressseverity[dass$stress_score>=34] <- 4
 
+#how stress vary over time
 plot(dass$Timestamp, dass$stress_score)
 smoothingSpline = smooth.spline(dass$Timestamp, dass$stress_score, spar=0.35)
 lines(smoothingSpline)
@@ -577,10 +528,11 @@ dass.avg <- dass %>%
     avg_anx=sum(anxiety_score)/n(),
     avg_stress=sum(stress_score)/n()
   )  
-
-#mapping average shannon and dass together
+###############################################################################################
+#mapping average shannon at both sites and dass together
 shannonDassbyP <- merge(groupedSampleP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
+#relationship between Shannon and DASS -- no relationship seen
 lmDepr <- lm(avg_Shannon ~ avg_depr, data = shannonDassbyP)
 summary(lmDepr) #pval = 0.8, adj r sqr = -0.01
 
@@ -590,6 +542,7 @@ summary(lmAnx) #pval = 0.7, adj r sqr = -0.01
 lmStr <- lm(avg_Shannon ~ avg_stress, data = shannonDassbyP)
 summary(lmStr) #pval = 0.228, adj r sqr = 0.007
 
+#relationship between DASS and Shannon, Plot -- no association seen
 ggplot(shannonDassbyP) +
   geom_point(aes(x = avg_depr, y = avg_Shannon, color = "Depression"), size = 2) +
   geom_point(aes(x = avg_anx, y = avg_Shannon, color = "Anxiety"), size = 2) +
@@ -617,17 +570,13 @@ ggplot(shannonDassbyP) +
   xlim(0, 40)
 
 
-
-
 ###########################################################################
-
-#mapping c.albicans and dass scores
+#mapping c.albicans and dass scores in vagina
 #convert sample_data to csv
 vaginal_rel_metadata_df <- as(sample_data(vaginal_phyloseq_rel), "data.frame")
 vaginal_rel_metadata_df$biome_id <- as.integer(vaginal_rel_metadata_df$biome_id)
 
-View(vaginal_rel_metadata_df)
-
+#reading in the lifestyle variables (merged with vaginal data) that Nicky created
 hbcmerged_df <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/vaginal_rel_metadata_hbc_df_matched.csv")
 
 #calculating average c.albicans rel.abundanxe
@@ -640,6 +589,7 @@ CAavgP <- hbcmerged_df %>%
 
 CAavgDass <- merge(CAavgP, dass.avg, by.x="biome_id", by.y="biome_id", all=TRUE)
 
+#no relationship between avg CA and DASS seen
 ggplot(CAavgDass) +
   geom_point(aes(x = avg_depr, y = avg_CA, color = "Depression"), size = 2) +
   geom_point(aes(x = avg_anx, y = avg_CA, color = "Anxiety"), size = 2) +
@@ -666,8 +616,9 @@ ggplot(CAavgDass) +
 dass$biome_id <- as.numeric(dass$biome_id)
 hbcmerged_df$logDate <- as.Date(hbcmerged_df$logDate)
 
+###########################################################################
+#merging my dass data and the data that Nicky created
 dass_CA <- left_join(dass, hbcmerged_df, by = c("Timestamp"="logDate", "biome_id"="biome_id"), relationship = "many-to-many")
-
 
 ####################
 dass_CA2 <- dass_CA %>%
@@ -784,18 +735,8 @@ sample_data(fungal2.0) <- merged_df %>%
   column_to_rownames(var = "SampleID") %>%
   sample_data()
 
-
-
 #######################################################################
 #merging merging merging vaginal data
-
-# #merging sample_data(fungal2.0) with the logDate that Nicky found
-# sample_df <- data.frame(sample_data(fungal2.0))
-# merged_sample_df <- sample_df %>%
-#   left_join(hbcmerged_df %>% select(SampleID, biome_id, logDate),
-#             by = c("SampleID", "biome_id"))
-# rownames(merged_sample_df) <- merged_sample_df$SampleID
-# sample_data(fungal2.0) <- sample_data(merged_sample_df)
 
 #reading in bacteria data
 bacteria_abundance <- read.csv("/Users/caoyang/Desktop/Tetel Lab/datasets/microbiome_crosstalk_merged_abund.csv")
@@ -895,11 +836,32 @@ ggplot(CST_df, aes(x = CST, y = calbican_rel_abundance_vag, fill = CST)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6) +
   geom_jitter(width = 0.2, alpha = 0.5, color = "black", size = 1) +
   labs(
-    title = "Distribution of C.albican Relative Abundance by Vaginal Microbiome CST per sample",
+    title = "Distribution of Vaginal C.albican Relative Abundance by CST per sample",
     x = "Vaginal CST",
-    y = "C.albicans Relative Abundance"
+    y = "Vaginal C.albicans Relative Abundance"
   ) +
   theme_minimal()
+
+
+CST_ca <- lmer(calbican_rel_abundance_vag ~ CST + (1 | biome_id), data = CST_df)
+summary(CST_ca)
+
+
+#set CST V as the reference level
+CST_df$CST <- factor(CST_df$CST)  # Convert to factor if not already
+CST_df$CST <- relevel(CST_df$CST, ref = "V")  # Set CSTV as reference level
+CST_ca_rev <- lmer(calbican_rel_abundance_vag ~ CST + (1 | biome_id), data = CST_df)
+summary(CST_ca_rev)
+
+#adding centered days 
+all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
+CST_df$study_day <- match(as.Date(CST_df$logDate), all_days) -1
+
+CST_df <- CST_df %>%
+  mutate(day_c = scale(study_day, center = TRUE, scale = FALSE))
+
+CST_ca_rev_days <- lmer(calbican_rel_abundance_vag ~ CST + day_c + I(day_c^2) + (1 | biome_id), data = CST_df)
+summary(CST_ca_rev_days)
 
 
 ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_vag, color = CST)) +
@@ -907,15 +869,15 @@ ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_vag, color = CST)) +
   geom_smooth(method = "loess", se = FALSE, size = 1) +
   scale_color_brewer(palette = "Set1") +
   labs(
-    title = "Candida albicans Abundance by CST",
+    title = "Vaginal Candida albicans Abundance by CST",
     x = "Date",
-    y = "C.Albicans Relative Abundance"
+    y = "Vaginal C.Albicans Relative Abundance"
   ) +
   theme_minimal()
 
 
 ########
-#gut
+#gut CA and CST
 ggplot(CST_df, aes(x = CST, y = calbican_rel_abundance_gut, fill = CST)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6) +
   geom_jitter(width = 0.2, alpha = 0.5, color = "black", size = 1) +
@@ -925,6 +887,10 @@ ggplot(CST_df, aes(x = CST, y = calbican_rel_abundance_gut, fill = CST)) +
     y = " Gut C.albicans Relative Abundance"
   ) +
   theme_minimal()
+
+CST_ca_gut <- lmer(calbican_rel_abundance_gut ~ CST + (1 | biome_id), data = CST_df)
+summary(CST_ca_gut)
+
 
 ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_gut, color = CST)) +
   geom_point(alpha = 0.6, size = 1.8) +
@@ -938,12 +904,13 @@ ggplot(CST_df, aes(x = logDate, y = calbican_rel_abundance_gut, color = CST)) +
   theme_minimal()
 
 
-
+################################################
 #check who have CSTV
 bacteria_abundance_merged %>%
   filter(CST == "V") %>%
   distinct(biome_id)
-
+################################################
+#case study of CA abundance overtime in ppl who has CST V
 df_62 <- bacteria_abundance_merged%>%
   filter(biome_id == 62) 
 
@@ -994,7 +961,7 @@ ggplot(df_62_long, aes(x = logDate, y = Abundance, color = Site, group = Site)) 
   ) +
   theme_minimal()
 ###################################################################
-#cross-site c.albicans abundance
+#cross-site c.albicans abundance correlation -- no relationship seen
 ggplot(bacteria_abundance_merged, aes(x = calbican_rel_abundance_gut, 
                      y = calbican_rel_abundance_vag)) +
   geom_point(alpha = 0.6, size = 2, color = "blue") +
@@ -1006,7 +973,8 @@ ggplot(bacteria_abundance_merged, aes(x = calbican_rel_abundance_gut,
   ) +
   theme_minimal()
 
-
+###################################################################
+#cross-site temporal trends
 cross_long <- bacteria_abundance_merged %>%
   select(logDate, calbican_rel_abundance_gut, calbican_rel_abundance_vag, taken_antibiotics) %>%
   pivot_longer(cols = starts_with("calbican_rel_abundance"),
@@ -1026,6 +994,7 @@ ggplot(cross_long, aes(x = logDate, y = Abundance, color = Site)) +
        color = "Site") +
   theme_minimal()
 
+###################################################################
 #taking antibiotics into account
 # Antibiotic group
 cross_long_anti1 <- cross_long %>% filter(taken_antibiotics == 1)
@@ -1048,10 +1017,10 @@ p2 <- ggplot(cross_long_anti0, aes(x = logDate, y = Abundance, color = Site)) +
        x = "Time", y = "Relative Abundance") +
   theme_minimal()
 
-# Show them side-by-side (optional)
+# Show them side-by-side
 p1 + p2
 ###################################################################
-#the ones who's taking SSRI
+#the ones who's taking SSRI case studies
 
 df_60 <- bacteria_abundance_merged%>%
   filter(biome_id == 60) 
@@ -1217,18 +1186,7 @@ ssridf$study_day <- match(as.Date(ssridf$logDate), all_days) -1
 ssridf <- ssridf %>%
   mutate(day_c = scale(study_day, center = TRUE, scale = FALSE))
 
-# ggplot(ssridf, aes(x = logDate, y = lacto_rel_abundance_vag, color = SSRI_status)) +
-#   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
-#   geom_smooth(se = FALSE, method = "loess") +
-#   labs(
-#     title = "Vaginal Lactobacillus Abundance Over Time",
-#     x = "Date",
-#     y = "Relative Abundance",
-#     color = "SSRI Use"
-#   ) +
-#   theme_minimal()
-
-
+#SSRI and non-user, temporal trends of Vaginal CA
 ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_status)) +
   geom_jitter(width = 0.5, height = 0, alpha = 0.6, size = 2) +
   geom_smooth(se = FALSE, method = "loess") +
@@ -1239,9 +1197,6 @@ ggplot(ssridf, aes(x = logDate, y = calbican_rel_abundance_vag, color = SSRI_sta
     color = "SSRI Use"
   ) +
   theme_minimal()
-
-
-
 
 
 # Make sure SSRI_status is a factor
@@ -1403,6 +1358,7 @@ ggplot(ssridf_clean, aes(x = CST, y = Shannon_gut, fill = CST)) +
     axis.text.x = element_text(angle = 30, hjust = 1)
   )
 
+#CST and vaginal shannon
 ggplot(ssridf_clean, aes(x = CST, y = Shannon_vag, fill = CST)) +
   geom_boxplot(alpha = 0.6, outlier.shape = NA) +  # Hide default outliers
   geom_jitter(width = 0.2, size = 2, alpha = 0.7, color = "black") +  # Overlay individual points
@@ -1437,6 +1393,7 @@ ggplot(ssridf_clean, aes(x = CST, y = Shannon_gut, fill = CST)) +
 
 
 #############################################################
+#case studies of all participants in a glance
 ssridf <- ssridf %>%
   arrange(biome_id, logDate)
 
@@ -1526,6 +1483,7 @@ ssridf_with_mood <- ssridf %>%
     by = c("biome_id", "logDate")
   )
 ################################################################
+#SSRI and DASS and CA analysis plots
 #plotting dass and ssri vaginal CA
 ssridf_with_mood <- ssridf_with_mood %>%
   mutate(logDate = as.Date(logDate)) %>%
@@ -1555,7 +1513,7 @@ ssridf_with_mood <- ssridf_with_mood %>%
     )
   )
 
-#how dass score fluctuate over time by SSRI use
+#how dass score depression/anxiety/stress fluctuate over time by SSRI use
 plot_mood <- function(data, mood_var) {
   # mood_var should be one of "depression_score", "anxiety_score", or "stress_score"
   data %>%
@@ -2298,24 +2256,118 @@ ggplot(boxplot_menses_df, aes(x = group, y = Shannon_gut, fill = group)) +
 vagCA_SSRI_Menses <- lmer(calbican_rel_abundance_vag ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
 summary(vagCA_SSRI_Menses)
 
+vagCA_SSRI <- lmer(calbican_rel_abundance_vag ~ SSRI_status + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagCA_SSRI)
+
 gutCA_SSRI_Menses <- lmer(calbican_rel_abundance_gut ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
 summary(gutCA_SSRI_Menses)
+
+gutCA_SSRI <- lmer(calbican_rel_abundance_gut ~ SSRI_status + (1 | biome_id) , data = ssridf_mood_menses)
+summary(gutCA_SSRI)
 
 vagLacto_SSRI_Menses <- lmer(lacto_rel_abundance_vag ~ SSRI_status * menses_day + (1 | biome_id) , data = ssridf_mood_menses)
 summary(vagLacto_SSRI_Menses)
 
+vagLacto_SSRI <- lmer(lacto_rel_abundance_vag ~ SSRI_status + (1 | biome_id) , data = ssridf_mood_menses)
+summary(vagLacto_SSRI)
 
+######################################################################
 #with depression
-vagCA_SSRI_Menses_d <- lmer(calbican_rel_abundance_vag ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
+#creating a new dataset where na are already dropped
+ssridf_lacto_mm_clean <- ssridf_mood_menses %>%
+  dplyr::select(lacto_rel_abundance_vag, SSRI_status, depression_score, menses_day, biome_id) %>%
+  tidyr::drop_na()
+
+vagCA_SSRI_Menses_d <- lmer(calbican_rel_abundance_vag ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mm_clean)
 summary(vagCA_SSRI_Menses_d)
+r2(vagCA_SSRI_Menses_d)
 
 gutCA_SSRI_Menses_d <- lmer(calbican_rel_abundance_gut ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
 summary(gutCA_SSRI_Menses_d)
+r2(gutCA_SSRI_Menses_d)
 
-vagLacto_SSRI_Menses_d <- lmer(lacto_rel_abundance_vag ~ SSRI_status * menses_day * depression_score + (1 | biome_id) , data = ssridf_mood_menses)
+vagLacto_SSRI_Menses_d <- lmer(lacto_rel_abundance_vag ~ SSRI_status + menses_day + depression_score +
+                                 SSRI_status:menses_day + SSRI_status:depression_score + menses_day:depression_score +
+                                 (1 | biome_id), data = ssridf_lacto_mm_clean) #took out the three-way interaction
 summary(vagLacto_SSRI_Menses_d)
+BIC(vagLacto_SSRI_Menses_d)
+r2(vagLacto_SSRI_Menses_d)
 
+withoutmenses <- lmer(lacto_rel_abundance_vag ~ SSRI_status * depression_score + (1 | biome_id) , data = ssridf_lacto_mm_clean)
+BIC(withoutmenses)
+anova(vagLacto_SSRI_Menses_d, withoutmenses)
+##################################################################################
+#full model actual comparisons for poster
+model_lacto_mm_full <- lmer(lacto_rel_abundance_vag ~ SSRI_status + menses_day + depression_score +
+                     SSRI_status:menses_day + SSRI_status:depression_score + menses_day:depression_score +
+                     (1 | biome_id), data = ssridf_lacto_mm_clean, REML = FALSE)
+summary(model_lacto_mm_full)
 
+model_lacto_mm_noSSRI <- lmer(lacto_rel_abundance_vag ~ menses_day + depression_score +
+                       menses_day:depression_score +
+                       (1 | biome_id), data = ssridf_lacto_mm_clean, REML = FALSE)
+
+model_lacto_mm_noMenses <- lmer(lacto_rel_abundance_vag ~ SSRI_status + depression_score +
+                                                    SSRI_status:depression_score +
+                                                    (1 | biome_id), data = ssridf_lacto_mm_clean, REML = FALSE)
+
+model_lacto_mm_noDepression <- lmer(lacto_rel_abundance_vag ~ SSRI_status + menses_day +
+                             SSRI_status:menses_day +
+                             (1 | biome_id), data = ssridf_lacto_mm_clean, REML = FALSE)
+
+anova(model_lacto_mm_noSSRI, model_lacto_mm_full)       # Test for SSRI main effect p = 0.1
+anova(model_lacto_mm_noMenses, model_lacto_mm_full)     # Test for menses_day main effect
+anova(model_lacto_mm_noDepression, model_lacto_mm_full) # Test for depression_score main effect
+##################################################################################
+#full model for poster - vaginal CA
+#creating a new dataset where na are already dropped
+ssridf_vagCA_mm_clean <- ssridf_mood_menses %>%
+  dplyr::select(calbican_rel_abundance_vag, SSRI_status, depression_score, menses_day, biome_id) %>%
+  tidyr::drop_na()
+
+model_vagCA_mm_full <- lmer(calbican_rel_abundance_vag ~ SSRI_status + menses_day + depression_score +
+                              SSRI_status:menses_day + SSRI_status:depression_score + menses_day:depression_score +
+                              (1 | biome_id), data = ssridf_vagCA_mm_clean, REML = FALSE)
+
+model_vagCA_mm_noSSRI <- lmer(calbican_rel_abundance_vag ~ menses_day + depression_score +
+                                menses_day:depression_score +
+                                (1 | biome_id), data = ssridf_vagCA_mm_clean, REML = FALSE)
+
+model_vagCA_mm_noMenses <- lmer(calbican_rel_abundance_vag ~ SSRI_status + depression_score +
+                                  SSRI_status:depression_score +
+                                  (1 | biome_id), data = ssridf_vagCA_mm_clean, REML = FALSE)
+
+model_vagCA_mm_noDepression <- lmer(calbican_rel_abundance_vag ~ SSRI_status + menses_day +
+                                      SSRI_status:menses_day +
+                                      (1 | biome_id), data = ssridf_vagCA_mm_clean, REML = FALSE)
+
+anova(model_vagCA_mm_noSSRI, model_vagCA_mm_full)       # Test for SSRI main effect
+anova(model_vagCA_mm_noMenses, model_vagCA_mm_full)     # Test for menses_day main effect
+anova(model_vagCA_mm_noDepression, model_vagCA_mm_full) # Test for depression_score main effect
+##################################################################################
+ssridf_gutCA_mm_clean <- ssridf_mood_menses %>%
+  dplyr::select(calbican_rel_abundance_gut, SSRI_status, depression_score, menses_day, biome_id) %>%
+  tidyr::drop_na()
+
+model_gutCA_mm_full <- lmer(calbican_rel_abundance_gut ~ SSRI_status + menses_day + depression_score +
+                              SSRI_status:menses_day + SSRI_status:depression_score + menses_day:depression_score +
+                              (1 | biome_id), data = ssridf_gutCA_mm_clean, REML = FALSE)
+
+model_gutCA_mm_noSSRI <- lmer(calbican_rel_abundance_gut ~ menses_day + depression_score +
+                                menses_day:depression_score +
+                                (1 | biome_id), data = ssridf_gutCA_mm_clean, REML = FALSE)
+
+model_gutCA_mm_noMenses <- lmer(calbican_rel_abundance_gut ~ SSRI_status + depression_score +
+                                  SSRI_status:depression_score +
+                                  (1 | biome_id), data = ssridf_gutCA_mm_clean, REML = FALSE)
+
+model_gutCA_mm_noDepression <- lmer(calbican_rel_abundance_gut ~ SSRI_status + menses_day +
+                                      SSRI_status:menses_day +
+                                      (1 | biome_id), data = ssridf_gutCA_mm_clean, REML = FALSE)
+
+anova(model_gutCA_mm_noSSRI, model_gutCA_mm_full)       # Test for SSRI main effect
+anova(model_gutCA_mm_noMenses, model_gutCA_mm_full)     # Test for menses_day main effect
+anova(model_gutCA_mm_noDepression, model_gutCA_mm_full) # Test for depression_score main effect
 ##################################################################################
 #looking at depression, menses, and SSRI in a continuous way
 lineplot_df <- ssridf_mood_menses %>%
@@ -2458,13 +2510,198 @@ ord_plot(vaginal_phy, color = "menses_day", size = 2) +
   stat_ellipse(aes(color = menses_day), type = "norm", size = 0.6, linetype = "dashed") +
   theme_minimal()
 
-# ord_plot(vaginal_phy, color = "biome_id", size = 2) +
+ord_plot(vaginal_phy, color = "biome_id", size = 2) +
 #   #stat_ellipse(aes(color = biome_id), type = "norm", size = 0.6, linetype = "dashed") +
-#   theme_minimal()
-
+  theme_minimal()
 #none of the results are significant.....
 
-############################################################################3
+
+
+############################################################################
+biome1to10 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 1:10, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA1to10 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome1to10)
+)
+
+# Subset vaginal samples
+vaginal_phy1to10 <- subset_samples(phyleqforPCA1to10, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy1to10 <- vaginal_phy1to10 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy1to10, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "1" = "red", "2" = "blue", "3" = "green", "4" = "purple", "5" = "orange",
+    "6" = "cyan", "7" = "pink", "8" = "brown", "9" = "yellow", "10" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome11to20 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 11:20, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA11to20 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome11to20)
+)
+
+# Subset vaginal samples
+vaginal_phy11to20 <- subset_samples(phyleqforPCA11to20, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy11to20 <- vaginal_phy11to20 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy11to20, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "11" = "red", "12" = "blue", "13" = "green", "14" = "purple", "15" = "orange",
+    "16" = "cyan", "17" = "pink", "18" = "brown", "19" = "yellow", "20" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome21to30 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 21:30, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA21to30 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome21to30)
+)
+
+# Subset vaginal samples
+vaginal_phy21to30 <- subset_samples(phyleqforPCA21to30, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy21to30 <- vaginal_phy21to30 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy21to30, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "21" = "red", "22" = "blue", "23" = "green", "24" = "purple", "25" = "orange",
+    "26" = "cyan", "27" = "pink", "28" = "brown", "29" = "yellow", "30" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome31to40 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 31:40, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA31to40 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome31to40)
+)
+
+# Subset vaginal samples
+vaginal_phy31to40 <- subset_samples(phyleqforPCA31to40, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy31to40 <- vaginal_phy31to40 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy31to40, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "31" = "red", "32" = "blue", "33" = "green", "34" = "purple", "35" = "orange",
+    "36" = "cyan", "37" = "pink", "38" = "brown", "39" = "yellow", "40" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome41to50 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 41:50, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA41to50 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome41to50)
+)
+
+# Subset vaginal samples
+vaginal_phy41to50 <- subset_samples(phyleqforPCA41to50, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy41to50 <- vaginal_phy41to50 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy41to50, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "41" = "red", "42" = "blue", "43" = "green", "44" = "purple", "45" = "orange",
+    "46" = "cyan", "47" = "pink", "48" = "brown", "49" = "yellow", "50" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome51to60 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 51:60, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA51to60 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome51to60)
+)
+
+# Subset vaginal samples
+vaginal_phy51to60 <- subset_samples(phyleqforPCA51to60, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy51to60 <- vaginal_phy51to60 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy51to60, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "51" = "red", "52" = "blue", "53" = "green", "54" = "purple", "55" = "orange",
+    "56" = "cyan", "57" = "pink", "58" = "brown", "59" = "yellow", "60" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+############################################################################
+biome61to70 <- updated_sample_data %>%
+  data.frame() %>%
+  mutate(biome_label = ifelse(biome_id %in% 61:70, as.character(biome_id), "Other"))
+
+# Create phyloseq object with updated sample data
+phyleqforPCA61to70 <- phyloseq(
+  otu_table(fungal2.0),
+  tax_table(fungal2.0),
+  sample_data(biome61to70)
+)
+
+# Subset vaginal samples
+vaginal_phy61to70 <- subset_samples(phyleqforPCA61to70, sampleType == "vaginal")
+
+# Transform with CLR, calculate ordination, and plot with biome_label coloring
+vaginal_phy61to70 <- vaginal_phy61to70 %>% tax_transform("clr") %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy61to70, color = "biome_label", size = 2) +
+  stat_ellipse(aes(color = biome_label), type = "norm", size = 0.6, linetype = "dashed") +
+  scale_color_manual(values = c(
+    "61" = "red", "62" = "blue", "63" = "green", "64" = "purple", "65" = "orange",
+    "66" = "cyan", "67" = "pink", "68" = "brown", "69" = "yellow", "70" = "darkgreen",
+    "Other" = "gray70"
+  )) +
+  theme_minimal()
+
+
+############################################################################
 #case study of SSRI user and menstruation and CA abundance
 menses_11 <- ssridf_mood_menses %>%
   filter(biome_id == 11)
@@ -2588,6 +2825,44 @@ ggplot(menses_61, aes(x = logDate, y = Shannon_vag)) +
     title = "Shannon Diversity Over Time (biome_id = 61, Non-User)"
   ) +
   theme_minimal()
+#################################################################
+#investigating the two clouds
+#creating a column in the phyloseq to stand for the clouds
+pca_obj <- ord_calc(vaginal_phy, method = "PCA", comp = 3)
+#vegan_ord <- attr(pca_obj, "vegan_ord")
+pca_scores <- as.data.frame(pca_obj@ord$CA$u)
+set.seed(123)
+kmeans_res <- kmeans(pca_scores[, 1:2], centers = 2)
+pca_scores$PCA_cluster <- factor(kmeans_res$cluster)
+
+#merging back to sample data
+# Match sample IDs
+pca_scores$SampleID <- rownames(pca_scores)
+
+# Get sample_data as data.frame
+samp_df_pca <- data.frame(sample_data(vaginal_phy))
+samp_df_pca$SampleID <- rownames(samp_df_pca)
+
+# Merge
+merged_pca_df <- merge(samp_df_pca, pca_scores[, c("SampleID", "PCA_cluster")], by = "SampleID")
+rownames(merged_pca_df) <- merged_pca_df$SampleID
+
+# Replace sample_data in phyloseq object
+sample_data(vaginal_phy) <- sample_data(merged_pca_df)
+
+vaginal_phy <- vaginal_phy %>% ord_calc(method = "PCA")
+
+ord_plot(vaginal_phy, color = "PCA_cluster", size = 2) +
+  stat_ellipse(aes(color = PCA_cluster), type = "norm", size = 0.6, linetype = "dashed") +
+  theme_minimal()
+#################################################################
+#investigate when the cluster change
+
+
+
+
+
+
 
 #################################################################
 #average stress, depression, and CA abundance for gut and vagina
@@ -2633,8 +2908,20 @@ ggplot(avgDASS_CA_gut, aes(x = avg_depression, y = avg_calbicans, color = SSRI_s
   theme_minimal()
 
 
+#if the average is normally distributed
+ggplot(avgDASS_CA_vag, aes(x = avg_calbicans, fill = SSRI_status)) +
+  geom_density(alpha = 0.5) +
+  theme_minimal()
 
+wilcox.test(avg_calbicans ~ SSRI_status, data = avgDASS_CA_vag) #not significant
 
+t.test(avg_calbicans ~ SSRI_status, data = avgDASS_CA_vag)
+
+boxplot(avg_calbicans ~ SSRI_status, data = avgDASS_CA_vag,
+        main = "Average C. albicans Abundance by SSRI Status",
+        ylab = "Average C. albicans Abundance",
+        xlab = "SSRI Status",
+        col = c("lightblue", "pink"))
 
 
 
